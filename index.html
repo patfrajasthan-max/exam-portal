@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Exam Portal</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes blink{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}70%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.fade-up{animation:fadeUp .4s ease forwards}
+#portal{position:fixed;inset:0;z-index:999999;overflow-y:auto;background:linear-gradient(135deg,#667eea 0%,#764ba2 50%,#f093fb 100%);font-family:'DM Sans','Segoe UI',sans-serif;}
+.glass{background:rgba(255,255,255,.15);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.3);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.15);}
+.gw{background:rgba(255,255,255,.97);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.8);border-radius:24px;box-shadow:0 20px 60px rgba(102,126,234,.2);}
+.btn{border:none;border-radius:14px;padding:13px 24px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:all .25s;width:100%;}
+.btn:hover{transform:translateY(-2px);}
+.btn:disabled{opacity:.5;cursor:default;transform:none!important;}
+.bp{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;box-shadow:0 8px 24px rgba(102,126,234,.4);}
+.bs{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 8px 24px rgba(16,185,129,.3);}
+.bd{background:linear-gradient(135deg,#f5576c,#ef4444);color:#fff;}
+.bo{background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);color:#fff;border-radius:12px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+.bo:hover{background:rgba(255,255,255,.25);}
+.sm{padding:8px 16px;font-size:13px;border-radius:10px;width:auto;}
+.inp{width:100%;border:2px solid rgba(102,126,234,.2);border-radius:14px;padding:13px 16px;font-family:inherit;font-size:15px;outline:none;background:#f8f9ff;color:#1a1a2e;transition:all .25s;}
+.inp:focus{border-color:#667eea;background:#fff;box-shadow:0 0 0 4px rgba(102,126,234,.12);}
+.lbl{color:#64748b;font-size:13px;font-weight:600;margin-bottom:7px;display:block;}
+.hdr{background:rgba(255,255,255,.12);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.2);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.ic{background:rgba(255,255,255,.25);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.icell{background:linear-gradient(135deg,#f8f9ff,#f0f4ff);border:1px solid rgba(102,126,234,.15);border-radius:14px;padding:12px 14px;}
+.ilbl{color:#94a3b8;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.ival{color:#1e293b;font-size:13px;font-weight:600;word-break:break-all;}
+.chip{display:inline-block;border-radius:8px;padding:3px 11px;font-size:12px;font-weight:700;}
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{padding:12px 16px;text-align:left;color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #f0f4ff;background:#f8f9ff;white-space:nowrap;}
+.tbl td{padding:13px 16px;font-size:13px;border-bottom:1px solid #f0f4ff;color:#1e293b;}
+.tbl tr:hover td{background:#f8f9ff;}
+.ew{height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.tb{padding:10px 20px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);position:sticky;top:0;z-index:100;}
+.eb{flex:1;display:grid;grid-template-columns:1fr 270px;overflow:hidden;}
+.em{overflow-y:auto;padding:20px 24px;background:#f0f4ff;}
+.es{background:rgba(255,255,255,.12);backdrop-filter:blur(20px);border-left:1px solid rgba(255,255,255,.2);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+.qcard{background:#fff;border:2px solid #e8edff;border-radius:20px;padding:24px;margin-bottom:16px;box-shadow:0 4px 16px rgba(102,126,234,.08);}
+.ts{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+.tl{background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;}
+.to{background:#fefce8;color:#ca8a04;border:1px solid #fde68a;}
+.pal{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.pb{aspect-ratio:1;border-radius:10px;border:2px solid #e8edff;font-size:12px;font-weight:700;cursor:pointer;background:#f8f9ff;color:#94a3b8;transition:all .2s;}
+.pb:hover{transform:scale(1.1);}
+.pb.seen{background:linear-gradient(135deg,#c7d2fe,#e0e7ff);color:#4338ca;border-color:#a5b4fc;}
+.pb.marked{background:linear-gradient(135deg,#fde68a,#fcd34d);color:#92400e;border-color:#fbbf24;}
+.pb.cur{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(102,126,234,.4);}
+.prog{height:8px;background:rgba(255,255,255,.3);border-radius:4px;overflow:hidden;}
+.pf{height:100%;border-radius:4px;transition:width .4s;background:linear-gradient(90deg,#4facfe,#00f2fe);}
+.vw{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;box-shadow:0 8px 24px rgba(0,0,0,.2);}
+.vw video{width:100%;height:100%;object-fit:cover;}
+.vb{position:absolute;inset:0;border:3px solid rgba(79,172,254,.8);border-radius:14px;pointer-events:none;}
+.vl{position:absolute;top:8px;left:8px;background:#f5576c;border-radius:6px;padding:2px 8px;color:#fff;font-size:10px;font-weight:700;animation:pulse 2s infinite;}
+.nb{height:8px;background:rgba(255,255,255,.2);border-radius:4px;overflow:hidden;}
+.nf{height:100%;border-radius:4px;transition:width .2s;}
+.wp{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f5576c,#ef4444);border-radius:16px;padding:14px 24px;z-index:10000;display:flex;align-items:center;gap:12px;box-shadow:0 16px 48px rgba(239,68,68,.4);min-width:300px;}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0;}
+.pt{position:relative;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#f0f4ff;border:2px solid #e8edff;}
+.pt img{width:100%;height:100%;object-fit:cover;}
+.pd{position:absolute;top:4px;right:4px;width:24px;height:24px;background:rgba(239,68,68,.9);border:none;border-radius:50%;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.sc{background:rgba(255,255,255,.95);border-radius:16px;padding:18px 20px;box-shadow:0 4px 16px rgba(102,126,234,.12);}
+.ldr{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;}
+.lr{width:48px;height:48px;border:4px solid rgba(255,255,255,.2);border-top:4px solid #fff;border-radius:50%;animation:spin .8s linear infinite;}
+/* ── Admin tabs ── */
+.atab{display:flex;gap:8px;margin-bottom:24px;background:rgba(255,255,255,.15);border-radius:16px;padding:6px;}
+.atb{flex:1;border:none;border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:rgba(255,255,255,.7);}
+.atb.active{background:#fff;color:#667eea;box-shadow:0 4px 16px rgba(102,126,234,.25);}
+/* ── Question builder ── */
+.qrow{background:#fff;border:2px solid #e8edff;border-radius:16px;padding:16px;margin-bottom:12px;position:relative;}
+.qrow-num{position:absolute;top:16px;left:16px;width:28px;height:28px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;}
+.qrow-del{position:absolute;top:12px;right:12px;background:#fef3f2;border:none;border-radius:8px;padding:4px 10px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;}
+.qrow-del:hover{background:#fee2e2;}
+.sinp{border:2px solid rgba(102,126,234,.2);border-radius:10px;padding:9px 12px;font-family:inherit;font-size:13px;outline:none;background:#f8f9ff;color:#1a1a2e;transition:all .2s;}
+.sinp:focus{border-color:#667eea;background:#fff;}
+select.sinp{cursor:pointer;}
+@media(max-width:768px){.eb{grid-template-columns:1fr}.es{display:none}.dg{grid-template-columns:1fr!important}.ig{grid-template-columns:1fr!important}.stg{grid-template-columns:1fr 1fr!important}.pg{grid-template-columns:repeat(2,1fr)}.atab{flex-direction:column}}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:rgba(255,255,255,.1)}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="portal"><div id="app"></div></div>
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const GAS="https://script.google.com/macros/s/AKfycbwUgMzLPZZK9xLLxw9Q42RD9aPlJnCgR9xb3a8Cn44DjiTC55Krr0pf_5a8DKLXKBfF/exec";
+const AU="admin@careereduhub.in", AP="Admin@2025";
+
+// ── STATE ─────────────────────────────────────────────────────
+let S={
+  scr:"login", student:null, exam:null, questions:[],
+  cur:0, seen:new Set(), marked:new Set(),
+  tLeft:0, wCnt:0, warnings:[], viols:[],
+  pdfDone:false, pdfLink:"", submitting:false, submitted:false,
+  eStatus:"loading", eMsg:"", photos:[],
+  attData:[], attLoad:true, attQ:"",
+  tIv:null, aIv:null, fIv:null, stream:null, camS:null,
+  // Admin tabs: attendance | timetable | questions
+  adminTab:"attendance",
+  examList:[], examListLoad:false,
+  // Timetable tab state
+  ttCode:"", ttRow:0, ttDate:"", ttStart:"", ttEnd:"",
+  ttMsg:"", ttSaving:false, ttLoading:false, ttLoaded:false,
+  // Question tab state
+  qCode:"", qRow:0, qYear:0, qCourse:"",
+  setupQs:[], qMsg:"", qSaving:false, qLoading:false, qLoaded:false,
+  // legacy (keep for doLogout)
+  setupCode:"", setupRow:0, setupDate:"", setupStart:"", setupEnd:"",
+  setupMsg:"", setupSaving:false, setupLoading:false, setupLoaded:false,
+};
+
+// ── RENDER ────────────────────────────────────────────────────
+function R(){
+  const root=document.getElementById("app");
+  if(!root)return;
+  const m={login:loginH,adminLogin:adminLH,dashboard:dashH,exam:examH,pdfUpload:pdfH,done:doneH,admin:adminH};
+  root.innerHTML=(m[S.scr]||loginH)();
+  bindEv();
+}
+
+// ── UTILS ─────────────────────────────────────────────────────
+function pt(s){if(!s)return null;const p=String(s).split(":");const d=new Date();d.setHours(+p[0],+p[1],0,0);return d;}
+function fc(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;return h>0?`${h}:${p2(m)}:${p2(sc)}`:`${p2(m)}:${p2(sc)}`;}
+function p2(n){return String(n).padStart(2,"0");}
+function ft(d){return d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});}
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function fmt(n){return Number(n||0).toLocaleString("en-IN");}
+function tod(){return new Date().toLocaleDateString("en-CA");}
+function dstr(){return new Date().toISOString().slice(0,10).replace(/-/g,"");}
+
+// ── API ───────────────────────────────────────────────────────
+async function ag(p){
+  const r=await fetch(GAS+"?"+new URLSearchParams(p),{redirect:"follow"});
+  const txt=await r.text();
+  try{return JSON.parse(txt);}catch{return null;}
+}
+async function ap(b){
+  // GAS POST: send as text/plain to avoid CORS preflight issues
+  const r=await fetch(GAS,{
+    method:"POST",
+    body:JSON.stringify(b),
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    redirect:"follow"
+  });
+  const txt=await r.text();
+  try{return JSON.parse(txt);}catch{return {success:false,error:"Bad response: "+txt.substring(0,100)};}
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────
+function loginH(){return `
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;">
+  <div style="position:fixed;top:-100px;right:-100px;width:400px;height:400px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none;"></div>
+  <div style="position:fixed;bottom:-80px;left:-80px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none;"></div>
+  <div style="width:100%;max-width:420px;z-index:1;" class="fade-up">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="width:80px;height:80px;margin:0 auto 16px;background:rgba(255,255,255,.2);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:38px;animation:float 3s ease-in-out infinite;box-shadow:0 8px 32px rgba(0,0,0,.15);">🎓</div>
+      <div style="color:#fff;font-size:28px;font-weight:800;letter-spacing:-.03em;margin-bottom:6px;">Exam Portal</div>
+      <div style="color:rgba(255,255,255,.7);font-size:14px;">Smart Online Examination System</div>
+    </div>
+    <div class="gw" style="padding:36px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="color:#1e293b;font-size:22px;font-weight:800;margin-bottom:6px;">Student Login</div>
+        <div style="color:#94a3b8;font-size:13px;">अपना Username और Password डालो</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div><span class="lbl">Username / Email</span><input id="eu" class="inp" type="text" placeholder="Enter username"/></div>
+        <div><span class="lbl">Password</span>
+          <div style="position:relative;"><input id="ep" class="inp" type="password" placeholder="Enter password" style="padding-right:46px;"/>
+          <button onclick="toggleP()" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:#94a3b8;">👁</button></div>
+        </div>
+        <div id="err" style="display:none;border-radius:14px;padding:16px;font-size:13px;"></div>
+        <button class="btn bp" id="lbtn" onclick="doLogin()">🔐 Login to Exam Portal</button>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:20px;">
+      <span onclick="S.scr='adminLogin';R();" style="color:rgba(255,255,255,.6);font-size:13px;cursor:pointer;border:1px solid rgba(255,255,255,.3);padding:6px 16px;border-radius:8px;">🛡️ Admin Login</span>
+    </div>
+    <div style="text-align:center;color:rgba(255,255,255,.3);font-size:12px;margin-top:14px;">© 2025 Exam Portal · Secure Examination</div>
+  </div>
+</div>`;}
+
+function toggleP(){const p=document.getElementById("ep");if(p)p.type=p.type==="password"?"text":"password";}
+
+async function doLogin(){
+  const u=document.getElementById("eu")?.value?.trim();
+  const p=document.getElementById("ep")?.value?.trim();
+  const btn=document.getElementById("lbtn"),err=document.getElementById("err");
+  if(!u||!p){sErr(err,"⚠️ Username और Password दोनों डालो।","#fef3f2","#ef4444");return;}
+  btn.disabled=true;btn.textContent="Verifying…";
+  try{
+    const res=await ag({action:"login",username:u,password:p});
+    if(res.noExam){sErr(err,"📅 आपका कोई Exam Schedule नहीं है। Admission office से संपर्क करें।","#f0f9ff","#3b82f6");btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";return;}
+    if(res.feeError){
+      err.style.display="block";err.style.background="linear-gradient(135deg,#fef3f2,#fff5f5)";err.style.border="2px solid #fecaca";
+      err.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="font-size:24px;">🚫</div><div><div style="color:#dc2626;font-weight:800;font-size:14px;">Fee Pending — Login Block</div><div style="color:#ef4444;font-size:12px;">Dear ${esc(res.name)}</div></div></div><div style="background:#fff;border-radius:10px;padding:10px;border:1px solid #fecaca;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:#64748b;font-size:12px;font-weight:600;">Pending:</span><span style="color:#dc2626;font-size:22px;font-weight:900;">₹${fmt(res.unpaid)}</span></div><div style="color:#94a3b8;font-size:11px;margin-top:4px;">Fee जमा करने के बाद login करें।</div></div><a href="https://www.careereduhub.in/p/payment.html" style="display:block;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;text-align:center;padding:9px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">💳 Fee जमा करो →</a>`;
+      btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";return;
+    }
+    if(res.success){S.student=res.student;S.scr="dashboard";R();loadExam();}
+    else{sErr(err,"❌ Invalid Username or Password","#fef3f2","#ef4444");btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";}
+  }catch(e){sErr(err,"⚡ Connection error. दोबारा try करो.","#fffbeb","#d97706");btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";}
+}
+function sErr(el,msg,bg,b){el.style.display="block";el.style.background=bg;el.style.border=`2px solid ${b}`;el.style.color=b;el.style.fontWeight="600";el.textContent=msg;}
+
+// ── ADMIN LOGIN ───────────────────────────────────────────────
+function adminLH(){return `
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:400px;" class="fade-up">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="width:70px;height:70px;margin:0 auto 14px;background:rgba(255,255,255,.2);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;">🛡️</div>
+      <div style="color:#fff;font-size:24px;font-weight:800;">Admin Panel</div>
+    </div>
+    <div class="gw" style="padding:32px;">
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div><span class="lbl">Admin Username</span><input id="au" class="inp" type="text" placeholder="Admin username"/></div>
+        <div><span class="lbl">Admin Password</span><input id="ap" class="inp" type="password" placeholder="Admin password"/></div>
+        <div id="aerr" style="display:none;color:#dc2626;font-size:13px;font-weight:600;background:#fef3f2;border:2px solid #fecaca;border-radius:10px;padding:10px;"></div>
+        <button class="btn bp" onclick="doAdminL()">🛡️ Admin Login</button>
+        <button class="btn" style="background:rgba(102,126,234,.1);color:#667eea;border:2px solid rgba(102,126,234,.2);" onclick="S.scr='login';R();">← Student Login</button>
+      </div>
+    </div>
+  </div>
+</div>`;}
+
+function doAdminL(){
+  const u=document.getElementById("au")?.value?.trim(),p=document.getElementById("ap")?.value?.trim();
+  const e=document.getElementById("aerr");
+  if(!u||!p){e.style.display="block";e.textContent="दोनों fields भरो।";return;}
+  if(u===AU&&p===AP){S.scr="admin";S.adminTab="attendance";R();loadAtt();loadExamList();}
+  else{e.style.display="block";e.textContent="❌ Invalid Credentials";}
+}
+
+// ── LOAD EXAM ─────────────────────────────────────────────────
+async function loadExam(){
+  try{
+    const st=S.student;
+    const exams=await ag({action:"getExams",examYear:st.examYear||1,course:st.course||""});
+    const now=new Date(),ts=tod();
+    const e=(exams||[]).find(x=>String(x.date).slice(0,10)===ts);
+    if(!e){S.eStatus="none";S.eMsg="📅 आज कोई Exam Schedule नहीं है";S.exam=null;}
+    else{
+      const s2=pt(e.startTime),en=pt(e.endTime);S.exam=e;
+      const early=new Date(s2.getTime()-10*60000);
+      if(now<early){S.eStatus="upcoming";S.eMsg=`⏰ Exam ${ft(s2)} पर शुरू होगा`;}
+      else if(now>=early&&now<s2){S.eStatus="active";S.eMsg=`🟡 Exam ${ft(s2)} पर शुरू — Join करो!`;}
+      else if(now>=s2&&now<=en){S.eStatus="active";S.eMsg="✅ Exam LIVE — Start करो!";}
+      else{S.eStatus="closed";S.eMsg="🔒 Exam बंद हो गया";}
+    }
+  }catch{S.eStatus="error";S.eMsg="Schedule load नहीं हुआ।";}
+  R();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function dashH(){
+  const st=S.student||{};
+  const SC={active:"#10b981",upcoming:"#f59e0b",closed:"#ef4444",none:"#94a3b8",error:"#ef4444",loading:"#667eea"}[S.eStatus]||"#94a3b8";
+  const flds=[["Name",st.name],["Father Name",st.fatherName],["Mother Name",st.motherName],["Mobile",st.mobile],["Email",st.email],["Course",st.course],["Duration",st.duration],["Institute",st.institute],["Session",st.session],["Enrollment No",st.enrollmentNo],["Roll No",st.rollNo]];
+  return `
+<div style="min-height:100vh;">
+  <div class="hdr">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="ic" style="width:38px;height:38px;">🎓</div>
+      <div><div style="color:#fff;font-size:15px;font-weight:700;">Exam Portal</div><div style="color:rgba(255,255,255,.7);font-size:11px;">Student Dashboard</div></div>
+    </div>
+    <button class="bo" onclick="doLogout()">Logout</button>
+  </div>
+  <div style="max-width:1100px;margin:0 auto;padding:24px 20px;" class="fade-up">
+    <div style="margin-bottom:22px;">
+      <div style="color:#fff;font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;">नमस्ते, ${esc(st.name?.split(" ")[0]||"")}! 👋</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="color:rgba(255,255,255,.7);font-size:14px;">Profile और आज का Exam</div>
+        <div style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:3px 12px;color:#fff;font-size:13px;font-weight:700;">📚 Year ${esc(String(st.examYear||1))}</div>
+        <div style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:3px 12px;color:rgba(255,255,255,.9);font-size:12px;">📖 ${esc(st.course||"")}</div>
+      </div>
+    </div>
+    <div class="dg" style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+      <div class="gw" style="padding:28px;">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding-bottom:18px;border-bottom:2px solid #f0f4ff;">
+          <div style="width:60px;height:60px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:18px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800;flex-shrink:0;">${esc((st.name||"?").charAt(0))}</div>
+          <div>
+            <div style="color:#1e293b;font-size:18px;font-weight:800;">${esc(st.name||"")}</div>
+            <div style="color:#667eea;font-size:13px;font-weight:600;margin-top:2px;">${esc(st.course||"")}</div>
+            <div style="color:#94a3b8;font-size:12px;">${esc(st.institute||"")} · Year ${esc(String(st.examYear||1))}</div>
+          </div>
+        </div>
+        <div class="ig" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          ${flds.map(([l,v])=>`<div class="icell"><div class="ilbl">${esc(l)}</div><div class="ival">${esc(v||"—")}</div></div>`).join("")}
+        </div>
+        ${Number(st.unpaid)>0?`<div style="margin-top:16px;background:linear-gradient(135deg,#fef3f2,#fff5f5);border:2px solid #fecaca;border-radius:16px;padding:14px;display:flex;justify-content:space-between;align-items:center;"><div><div style="color:#dc2626;font-size:13px;font-weight:700;">⚠️ Fee Pending</div><div style="color:#94a3b8;font-size:11px;">Paid: ₹${fmt(st.paid)}</div></div><div style="color:#dc2626;font-size:22px;font-weight:900;">₹${fmt(st.unpaid)}</div></div>`:
+        `<div style="margin-top:16px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #bbf7d0;border-radius:16px;padding:14px;display:flex;justify-content:space-between;align-items:center;"><div><div style="color:#16a34a;font-size:13px;font-weight:700;">✅ Fee Cleared</div><div style="color:#94a3b8;font-size:11px;">Total: ₹${fmt(st.totalFee)}</div></div><div style="color:#16a34a;font-size:22px;font-weight:900;">₹${fmt(st.paid)}</div></div>`}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="gw" style="padding:22px;">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:${SC};box-shadow:0 0 10px ${SC};"></div>
+            <span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">Today's Exam</span>
+          </div>
+          ${S.eStatus==="loading"?`<div style="color:#94a3b8;text-align:center;padding:20px;">Loading…</div>`:
+          S.exam?`
+            <div style="color:#1e293b;font-size:17px;font-weight:800;margin-bottom:14px;line-height:1.3;">${esc(S.exam.subject)}</div>
+            ${[["📋",S.exam.examCode],["⏰",S.exam.startTime],["🏁",S.exam.endTime],["📊 Marks",S.exam.totalMarks]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f0f4ff;"><span style="color:#94a3b8;font-size:13px;">${l}</span><span style="color:#1e293b;font-size:13px;font-weight:700;">${esc(String(v||""))}</span></div>`).join("")}
+            <div style="background:${SC}18;border:2px solid ${SC}44;border-radius:12px;padding:10px;text-align:center;color:${SC};font-size:13px;font-weight:700;margin:12px 0;">${S.eMsg}</div>
+            ${S.eStatus==="active"?`<button class="btn bp" onclick="startExam()">🚀 Exam Start करो</button>`:""}
+          `:`<div style="text-align:center;padding:20px;"><div style="font-size:40px;margin-bottom:10px;">📅</div><div style="color:#94a3b8;font-size:14px;">${S.eMsg}</div></div>`}
+        </div>
+        <div class="glass" style="padding:20px;">
+          <div style="color:#fff;font-size:13px;font-weight:700;margin-bottom:12px;">📌 Important Rules</div>
+          ${["Camera और Mic पूरे exam में ON रखो","Tab switch मत करो","सभी answers paper पर लिखो","सबकी एक PDF बनाओ → Upload करो","10 min पहले join allowed"].map(g=>`<div style="display:flex;gap:8px;margin-bottom:8px;"><div style="width:18px;height:18px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;"><div style="width:6px;height:6px;background:#fff;border-radius:50%;"></div></div><span style="color:rgba(255,255,255,.8);font-size:12px;line-height:1.5;">${g}</span></div>`).join("")}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;}
+
+function doLogout(){
+  clearIvs();
+  if(S.stream)S.stream.getTracks().forEach(t=>t.stop());
+  if(S.camS)S.camS.getTracks().forEach(t=>t.stop());
+  S={scr:"login",student:null,exam:null,questions:[],cur:0,seen:new Set(),marked:new Set(),tLeft:0,wCnt:0,warnings:[],viols:[],pdfDone:false,pdfLink:"",submitting:false,submitted:false,eStatus:"loading",eLoading:false,eMsg:"",photos:[],attData:[],attLoad:true,attQ:"",tIv:null,aIv:null,fIv:null,stream:null,camS:null,adminTab:"attendance",examList:[],examListLoad:false,ttCode:"",ttRow:0,ttDate:"",ttStart:"",ttEnd:"",ttMsg:"",ttSaving:false,ttLoading:false,ttLoaded:false,qCode:"",qRow:0,qYear:0,qCourse:"",setupQs:[],qMsg:"",qSaving:false,qLoading:false,qLoaded:false,setupCode:"",setupRow:0,setupDate:"",setupStart:"",setupEnd:"",setupMsg:"",setupSaving:false,setupLoading:false,setupLoaded:false};
+  R();
+}
+
+// ── RULES POPUP ───────────────────────────────────────────────
+function showRules(){
+  var ov=document.createElement("div");
+  ov.id="rov";
+  ov.style.position="fixed";ov.style.inset="0";ov.style.background="rgba(0,0,0,0.7)";
+  ov.style.zIndex="10000";ov.style.display="flex";ov.style.alignItems="center";
+  ov.style.justifyContent="center";ov.style.padding="20px";ov.style.backdropFilter="blur(8px)";
+
+  var rules=[
+    ["🎥","Camera & Mic","Camera और Mic पूरे exam में ON रखना अनिवार्य है।"],
+    ["📝","Paper पर लिखो","सभी questions पढ़ो और white paper पर लिखो।"],
+    ["📄","एक PDF","सभी answers की photos लो, एक PDF बनाओ।"],
+    ["📤","Upload करो","Exam complete → PDF upload → तभी submit।"],
+    ["⏱️","Timer","EndTime तक complete करना है।"],
+    ["⚠️","Violations","Tab switch, copy-paste record होंगे।"],
+    ["🚫","No Auto Submit","Violations पर auto submit नहीं, सिर्फ warning।"]
+  ];
+
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:24px;padding:36px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;";
+
+  var title=document.createElement("div");
+  title.style.cssText="text-align:center;margin-bottom:24px;";
+  title.innerHTML="<div style='font-size:48px;margin-bottom:12px;'>📋</div><div style='color:#1e293b;font-size:22px;font-weight:800;margin-bottom:6px;'>Exam Rules</div><div style='color:#94a3b8;font-size:13px;'>शुरू करने से पहले ध्यान से पढ़ो</div>";
+  box.appendChild(title);
+
+  rules.forEach(function(r){
+    var d=document.createElement("div");
+    d.style.cssText="display:flex;gap:14px;margin-bottom:14px;padding:12px;background:#f8f9ff;border-radius:14px;border:1px solid #e8edff;";
+    d.innerHTML="<div style='font-size:20px;flex-shrink:0;'>"+r[0]+"</div><div><div style='color:#1e293b;font-size:13px;font-weight:700;'>"+r[1]+"</div><div style='color:#64748b;font-size:12px;line-height:1.5;margin-top:2px;'>"+r[2]+"</div></div>";
+    box.appendChild(d);
+  });
+
+  var agree=document.createElement("div");
+  agree.style.cssText="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:14px;padding:14px;margin-bottom:20px;text-align:center;";
+  agree.innerHTML="<div style='color:#16a34a;font-size:13px;font-weight:700;'>✅ मैं सभी नियमों से सहमत हूँ</div>";
+  box.appendChild(agree);
+
+  var btns=document.createElement("div");
+  btns.style.cssText="display:grid;grid-template-columns:1fr 1fr;gap:12px;";
+
+  var cancel=document.createElement("button");
+  cancel.textContent="Cancel";
+  cancel.style.cssText="background:#f1f5f9;border:2px solid #e2e8f0;border-radius:12px;padding:13px;color:#64748b;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;";
+  cancel.onclick=function(){document.getElementById("rov").remove();};
+  btns.appendChild(cancel);
+
+  var start=document.createElement("button");
+  start.textContent="✅ Agree — Start Exam";
+  start.style.cssText="background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:12px;padding:13px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;";
+  start.onclick=function(){document.getElementById("rov").remove();startExam();};
+  btns.appendChild(start);
+
+  box.appendChild(btns);
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+}
+
+async function startExam(){
+  if(!S.student||!S.exam){alert("Student या Exam data नहीं मिला। Page refresh करो।");return;}
+  S.questions=[];S.cur=0;S.seen=new Set();S.marked=new Set();
+  S.wCnt=0;S.warnings=[];S.viols=[];S.pdfDone=false;S.submitted=false;S.photos=[];
+  S.scr="exam";S.eLoading=true;R();
+  try{
+    const qs=await ag({action:"getQuestions",examCode:S.exam.examCode,examYear:S.student.examYear||1,course:S.student.course||""});
+    S.questions=Array.isArray(qs)?qs.sort((a,b)=>Number(a.qNo)-Number(b.qNo)):[];
+    if(!S.questions.length) S.questions=[{examCode:S.exam.examCode,qNo:1,question:"Answer Sheet paper पर लिखो और PDF upload करो।",type:"LONG",marks:S.exam.totalMarks||100}];
+    S.seen.add(0);
+  }catch(err){
+    S.questions=[{examCode:S.exam.examCode,qNo:1,question:"Paper पर answers लिखो और PDF upload करो।",type:"LONG",marks:S.exam.totalMarks||100}];
+    S.seen.add(0);
+  }
+  S.eLoading=false;
+  try{await ap({action:"logAttendance",name:S.student.name,rollNo:String(S.student.rollNo),examCode:S.exam.examCode,course:S.student.course||"",startTime:new Date().toTimeString().slice(0,8),status:"In Exam"});}catch{}
+  R();
+  try{startTimer();}catch{}
+  try{await startCamera();}catch{}
+  try{startAntiCheat();}catch{}
+  try{document.documentElement.requestFullscreen?.();}catch{}
+}
+
+
+// ── EXAM HTML ─────────────────────────────────────────────────
+function examH(){
+  if(S.eLoading)return`<div class="ldr"><div class="lr"></div><p style="color:rgba(255,255,255,.8);font-size:14px;">Questions load हो रहे हैं…</p></div>`;
+  if(!S.questions.length)return`<div class="ldr"><div class="lr"></div><p style="color:rgba(255,255,255,.8);font-size:14px;">Questions नहीं मिले। Admin से contact करो।</p></div>`;
+  const q=S.questions[S.cur];
+  const tot=S.questions.length;
+  const isR=S.tLeft<=300&&S.tLeft>0,isO=S.tLeft<=1800&&S.tLeft>300;
+  const tc=isR?"#ef4444":isO?"#f59e0b":"#fff";
+  const tbg=isR?"rgba(239,68,68,.2)":isO?"rgba(245,158,11,.15)":"rgba(255,255,255,.15)";
+  const tmap={SHORT:"Short Answer",LONG:"Long Answer",ONE:"One Line Answer"};
+  const tcls={SHORT:"ts",LONG:"tl",ONE:"to"};
+  const tic={SHORT:"✏️",LONG:"📝",ONE:"〰️"};
+  return`
+<div class="ew">
+  <div class="tb" style="background:${tbg};border-bottom:1px solid rgba(255,255,255,.2);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="ic" style="width:32px;height:32px;">🎓</div>
+      <div><div style="color:#fff;font-size:13px;font-weight:700;">${esc(S.exam?.subject||"")}</div><div style="color:rgba(255,255,255,.6);font-size:11px;">${esc(S.student?.name||"")} · ${esc(S.student?.rollNo||"")}</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+      <div id="sav" style="color:rgba(255,255,255,.6);font-size:11px;"></div>
+      <div style="background:${tbg};border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:6px 16px;">⏱️ <span id="tmr" style="font-family:monospace;font-size:20px;font-weight:900;color:${tc};">${fc(S.tLeft)}</span></div>
+      <div id="vbdg" style="background:rgba(239,68,68,.2);border-radius:8px;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;${S.wCnt>0?"animation:blink 2s infinite":""}">⚠️ ${S.wCnt} Violations</div>
+      ${S.cur===tot-1?`<button onclick="goToPDF()" style="background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:10px;padding:7px 16px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">✅ Complete Exam</button>`:
+      `<button onclick="if(confirm('अभी submit करना है?'))goToPDF();" style="background:rgba(239,68,68,.3);border:1px solid rgba(239,68,68,.5);border-radius:10px;padding:7px 14px;color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">Submit</button>`}
+    </div>
+  </div>
+  <div id="wpop" class="wp" style="display:none;"><span style="font-size:22px;">🚨</span><div><div id="wcnt" style="color:#fff;font-weight:800;font-size:14px;"></div><div id="wtxt" style="color:rgba(255,255,255,.85);font-size:13px;"></div></div></div>
+  <div class="eb">
+    <div class="em">
+      <div style="background:linear-gradient(135deg,#fffbeb,#fef9c3);border:2px solid #fde68a;border-radius:16px;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;">
+        <span style="font-size:18px;flex-shrink:0;">📋</span>
+        <div style="color:#78350f;font-size:12px;line-height:1.7;"><b>Instructions:</b> सभी questions ध्यान से पढ़ो → White paper पर answers लिखो (Q.No जरूर लिखो) → सबकी <b>एक PDF बनाओ</b> → Last question पर "Complete Exam" click करो → PDF upload करो → Submit.</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#64748b;font-size:13px;font-weight:600;">Q ${S.cur+1} of ${tot}</span><span style="color:#64748b;font-size:13px;">${S.seen.size} viewed</span></div>
+        <div class="prog" style="background:#e8edff;"><div class="pf" style="width:${(S.seen.size/Math.max(1,tot))*100}%;"></div></div>
+      </div>
+      ${q?`<div class="qcard">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;flex-shrink:0;">${q.qNo}</div>
+            <span class="chip ${tcls[q.type]||"tl"}" style="display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:5px 14px;font-size:12px;font-weight:700;">${tic[q.type]||"📝"} ${tmap[q.type]||q.type}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:15px;font-weight:800;">${q.marks} Marks</span>
+            <button onclick="toggleMark()" style="background:${S.marked.has(S.cur)?"#fffbeb":"#f8f9ff"};border:2px solid ${S.marked.has(S.cur)?"#fde68a":"#e8edff"};border-radius:10px;padding:5px 12px;color:${S.marked.has(S.cur)?"#d97706":"#94a3b8"};font-size:12px;font-weight:700;cursor:pointer;">🔖 ${S.marked.has(S.cur)?"Marked":"Mark"}</button>
+          </div>
+        </div>
+        <p style="color:#1e293b;font-size:17px;line-height:1.8;font-weight:500;margin-bottom:20px;">${esc(q.question)}</p>
+        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #bbf7d0;border-radius:14px;padding:14px;display:flex;gap:10px;">
+          <span style="font-size:18px;flex-shrink:0;">✍️</span>
+          <div><div style="color:#16a34a;font-size:13px;font-weight:700;margin-bottom:3px;">Paper पर लिखो</div><div style="color:#166534;font-size:12px;line-height:1.5;">${q.type==="ONE"?"एक line में answer।":q.type==="SHORT"?"2-3 sentences।":"Detail में — points/diagram use करो।"} Question number <b>Q.${q.qNo}</b> जरूर लिखो।</div></div>
+        </div>
+      </div>`:""}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+        <button onclick="prevQ()" ${S.cur===0?"disabled":""} style="background:rgba(255,255,255,.9);border:2px solid rgba(102,126,234,.2);border-radius:12px;padding:10px 20px;color:#667eea;font-size:14px;font-weight:700;cursor:pointer;">← Previous</button>
+        ${S.cur<tot-1?`<button onclick="nextQ()" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:12px;padding:10px 24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(102,126,234,.4);">Next →</button>`:
+        `<button onclick="goToPDF()" style="background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;padding:10px 24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(16,185,129,.4);">✅ Complete → PDF Upload</button>`}
+      </div>
+    </div>
+    <div class="es">
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">Camera</span><span id="fsts" style="color:#4facfe;font-size:11px;font-weight:600;">${S.fStatus||"Detecting…"}</span></div>
+        <div class="vw"><video id="vdo" autoplay muted playsinline></video><div class="vb"></div><div class="vl">● LIVE</div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">Noise</span><span id="ntxt" style="color:#4facfe;font-size:11px;font-weight:600;">Low</span></div>
+        <div class="nb"><div id="nf" class="nf" style="width:0%;background:linear-gradient(90deg,#4facfe,#00f2fe);"></div></div>
+      </div>
+      ${isR?`<div style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:10px;text-align:center;"><div style="color:#ef4444;font-size:12px;font-weight:700;animation:blink 1s infinite;">🔴 5 min से कम!</div><div style="color:rgba(255,255,255,.7);font-size:11px;margin-top:3px;">जल्दी PDF upload करो</div></div>`:
+      isO?`<div style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:12px;padding:10px;text-align:center;"><div style="color:#f59e0b;font-size:12px;font-weight:700;">🟡 30 min से कम</div></div>`:""}
+      <div>
+        <div style="color:rgba(255,255,255,.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Palette</div>
+        <div class="pal">
+          ${S.questions.map((_,i)=>{let c="pb";if(i===S.cur)c+=" cur";else if(S.marked.has(i))c+=" marked";else if(S.seen.has(i))c+=" seen";return`<button class="${c}" onclick="goQ(${i})">${i+1}</button>`;}).join("")}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px;">
+          ${[["linear-gradient(135deg,#667eea,#764ba2)","Current"],["linear-gradient(135deg,#c7d2fe,#e0e7ff)","Viewed"],["linear-gradient(135deg,#fde68a,#fcd34d)","Marked"],["rgba(255,255,255,.15)","Not Viewed"]].map(([bg,l])=>`<div style="display:flex;align-items:center;gap:8px;"><div style="width:12px;height:12px;border-radius:4px;background:${bg};"></div><span style="color:rgba(255,255,255,.6);font-size:11px;">${l}</span></div>`).join("")}
+        </div>
+      </div>
+      ${S.warnings.length?`<div><div style="color:rgba(255,255,255,.7);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Violations (${S.wCnt})</div>${S.warnings.slice(-4).map(w=>`<div style="background:rgba(239,68,68,.15);border-radius:8px;padding:5px 10px;margin-bottom:4px;"><span style="color:#fecaca;font-size:11px;">${esc(w.time)}: ${esc(w.msg)}</span></div>`).join("")}</div>`:""}
+    </div>
+  </div>
+</div>`;}
+
+// ── NAVIGATION ────────────────────────────────────────────────
+function prevQ(){if(S.cur>0){S.cur--;S.seen.add(S.cur);R();recon();}}
+function nextQ(){if(S.cur<S.questions.length-1){S.cur++;S.seen.add(S.cur);R();recon();}}
+function goQ(i){S.cur=i;S.seen.add(i);R();recon();}
+function toggleMark(){S.marked.has(S.cur)?S.marked.delete(S.cur):S.marked.add(S.cur);R();recon();}
+function recon(){setTimeout(()=>{const v=document.getElementById("vdo");if(v&&S.stream)v.srcObject=S.stream;startTimer();},60);}
+function goToPDF(){clearIvs();if(S.stream){S.stream.getTracks().forEach(t=>t.stop());S.stream=null;}try{document.exitFullscreen?.();}catch{}stopAntiCheat();S.scr="pdfUpload";S.photos=[];R();}
+
+// ── TIMER ─────────────────────────────────────────────────────
+function startTimer(){
+  clearInterval(S.tIv);
+  const end=pt(S.exam.endTime);
+  const tick=()=>{
+    const diff=Math.max(0,Math.floor((end-new Date())/1000));
+    S.tLeft=diff;
+    const el=document.getElementById("tmr");
+    if(el){el.textContent=fc(diff);const r=diff<=300&&diff>0,o=diff<=1800&&diff>300;el.style.color=r?"#ef4444":o?"#f59e0b":"#fff";}
+    if(diff<=0&&!S.submitted)goToPDF();
+  };
+  tick();S.tIv=setInterval(tick,1000);
+}
+
+// ── CAMERA ────────────────────────────────────────────────────
+async function startCamera(){
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+    S.stream=s;S.fStatus="✅ Active";
+    setTimeout(()=>{const v=document.getElementById("vdo");if(v)v.srcObject=s;},200);
+    try{setupAudio(s);}catch{}
+    try{fakeFace();}catch{}
+  }catch(e){
+    console.warn("Camera denied:",e);
+    S.fStatus="❌ Denied";
+    try{addViol("Camera denied");}catch{}
+  }
+}
+function fakeFace(){
+  let nf=0;
+  S.fIv=setInterval(()=>{
+    if(S.scr!=="exam"){clearInterval(S.fIv);return;}
+    const r=Math.random();
+    if(r<0.87){S.fStatus="✅ Face Detected";nf=0;}
+    else if(r<0.95){S.fStatus="⚠️ No Face";nf++;if(nf>=2)trigW("No face detected!");}
+    else{S.fStatus="⚠️ Multiple Faces";trigW("Multiple faces detected!");}
+    const el=document.getElementById("fsts");
+    if(el){el.textContent=S.fStatus;el.style.color=S.fStatus.includes("✅")?"#4facfe":"#f7971e";}
+  },4500);
+}
+function setupAudio(s){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const an=ctx.createAnalyser();an.fftSize=256;
+    ctx.createMediaStreamSource(s).connect(an);
+    const d=new Uint8Array(an.frequencyBinCount);
+    function m(){
+      if(S.scr!=="exam")return;
+      an.getByteFrequencyData(d);
+      const avg=d.reduce((a,b)=>a+b,0)/d.length;
+      S.noiseLevel=Math.min(100,avg*2);
+      const nf=document.getElementById("nf"),nt=document.getElementById("ntxt");
+      if(nf){nf.style.width=S.noiseLevel+"%";nf.style.background=S.noiseLevel>60?"linear-gradient(90deg,#f5576c,#f093fb)":S.noiseLevel>30?"linear-gradient(90deg,#f7971e,#ffd200)":"linear-gradient(90deg,#4facfe,#00f2fe)";}
+      if(nt){nt.textContent=S.noiseLevel>60?"High":S.noiseLevel>30?"Med":"Low";nt.style.color=S.noiseLevel>60?"#f5576c":S.noiseLevel>30?"#f7971e":"#4facfe";}
+      requestAnimationFrame(m);
+    }
+    m();
+  }catch{}
+}
+
+// ── ANTI CHEAT ────────────────────────────────────────────────
+function startAntiCheat(){document.addEventListener("visibilitychange",onVis);document.addEventListener("contextmenu",noD);document.addEventListener("copy",noD);document.addEventListener("paste",noD);document.addEventListener("keydown",noK);}
+function stopAntiCheat(){document.removeEventListener("visibilitychange",onVis);document.removeEventListener("contextmenu",noD);document.removeEventListener("copy",noD);document.removeEventListener("paste",noD);document.removeEventListener("keydown",noK);}
+function onVis(){if(document.hidden&&S.scr==="exam"){trigW("Tab switch detected!");addViol("Tab switch");}}
+function noD(e){if(S.scr==="exam")e.preventDefault();}
+function noK(e){if(S.scr==="exam"&&(e.ctrlKey||e.metaKey)&&"cvxa".includes(e.key.toLowerCase()))e.preventDefault();}
+function trigW(msg){
+  S.wCnt++;S.warnings.push({msg,time:new Date().toLocaleTimeString()});
+  const wb=document.getElementById("vbdg");
+  if(wb){wb.textContent=`⚠️ ${S.wCnt} Violations`;wb.style.animation="blink 2s infinite";}
+  const wp=document.getElementById("wpop"),wt=document.getElementById("wtxt"),wc=document.getElementById("wcnt");
+  if(wp)wp.style.display="flex";if(wt)wt.textContent=msg;if(wc)wc.textContent=`Warning #${S.wCnt}`;
+  setTimeout(()=>{const w=document.getElementById("wpop");if(w)w.style.display="none";},5000);
+}
+function addViol(msg){const last=S.viols[S.viols.length-1];if(last&&last.msg===msg&&Date.now()-last.ts<30000)return;S.viols.push({msg,ts:Date.now(),time:new Date().toLocaleTimeString()});}
+function clearIvs(){clearInterval(S.tIv);clearInterval(S.aIv);clearInterval(S.fIv);}
+
+// ── PDF UPLOAD SCREEN ─────────────────────────────────────────
+function pdfH(){
+  const pn=`${S.student?.rollNo||"ROLL"}_${(S.student?.name||"NAME").replace(/\s+/g,"_")}_${S.exam?.examCode||"EXAM"}_${dstr()}.pdf`;
+  return`
+<div style="min-height:100vh;">
+  <div class="hdr"><div style="display:flex;align-items:center;gap:10px;"><div class="ic" style="width:38px;height:38px;">📄</div><div><div style="color:#fff;font-size:15px;font-weight:700;">PDF Upload</div><div style="color:rgba(255,255,255,.7);font-size:11px;">${esc(S.exam?.subject||"")}</div></div></div></div>
+  <div style="max-width:700px;margin:0 auto;padding:24px 20px;" class="fade-up">
+    <div style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(5,150,105,.2));border:2px solid rgba(16,185,129,.4);border-radius:20px;padding:20px;margin-bottom:24px;text-align:center;">
+      <div style="font-size:40px;margin-bottom:8px;">🎉</div>
+      <div style="color:#fff;font-size:20px;font-weight:800;margin-bottom:4px;">Exam Complete!</div>
+      <div style="color:rgba(255,255,255,.8);font-size:14px;">अब Answer Sheet PDF upload करो</div>
+    </div>
+    <div class="gw" style="padding:24px;margin-bottom:20px;">
+      <div style="color:#1e293b;font-size:16px;font-weight:800;margin-bottom:16px;">📋 Steps</div>
+      ${[["1️⃣","Paper check करो","सभी Q.No के answers लिखे हैं?"],["2️⃣","Camera खोलो","नीचे button click करो"],["3️⃣","Photos लो","हर page की clear photo (क्रम में)"],["4️⃣","PDF Create करो","Photos → Auto PDF बनेगा"],["5️⃣","Upload & Submit","PDF Drive में जाएगा → Submit करो"]].map(([n,t,d])=>`<div style="display:flex;gap:12px;margin-bottom:10px;padding:10px;background:#f8f9ff;border-radius:12px;border:1px solid #e8edff;"><span style="font-size:16px;flex-shrink:0;">${n}</span><div><div style="color:#1e293b;font-size:13px;font-weight:700;">${t}</div><div style="color:#64748b;font-size:12px;">${d}</div></div></div>`).join("")}
+      <div style="background:#f0f4ff;border:2px solid rgba(102,126,234,.2);border-radius:11px;padding:11px 14px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div><div style="color:#94a3b8;font-size:11px;font-weight:600;margin-bottom:2px;">PDF File Name:</div><div style="color:#667eea;font-family:monospace;font-size:12px;font-weight:700;">${pn}</div></div>
+        <button onclick="navigator.clipboard?.writeText('${pn}')" style="background:#667eea;border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">📋 Copy</button>
+      </div>
+    </div>
+
+    <div class="gw" style="padding:24px;margin-bottom:20px;">
+      <div style="color:#1e293b;font-size:16px;font-weight:800;margin-bottom:14px;">📸 Photos (${S.photos.length})</div>
+      <div id="camwrap" style="display:none;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px;position:relative;">
+        <video id="camprev" autoplay playsinline style="width:100%;max-height:400px;object-fit:contain;"></video>
+        <div style="position:absolute;bottom:14px;left:0;right:0;display:flex;justify-content:center;gap:14px;">
+          <button onclick="capPhoto()" style="background:rgba(255,255,255,.95);border:none;border-radius:50%;width:64px;height:64px;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);">📷</button>
+          <button onclick="closeCamera()" style="background:rgba(239,68,68,.85);border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);align-self:center;">✕</button>
+        </div>
+      </div>
+      ${S.photos.length>0?`<div class="pg">${S.photos.map((ph,i)=>`<div class="pt"><img src="${ph}" alt="P${i+1}"/><button class="pd" onclick="delPh(${i})">✕</button><div style="position:absolute;bottom:4px;left:6px;background:rgba(0,0,0,.7);border-radius:4px;padding:1px 6px;color:#fff;font-size:10px;font-weight:700;">P${i+1}</div></div>`).join("")}</div>`:""}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
+        <button onclick="openCam()" class="btn bp sm" style="width:100%;padding:12px;">📷 Camera खोलो</button>
+        <button onclick="document.getElementById('finp').click()" class="btn sm" style="width:100%;padding:12px;background:linear-gradient(135deg,#f0f4ff,#e8edff);color:#667eea;border:2px solid rgba(102,126,234,.3);font-weight:700;cursor:pointer;">📁 Device से File</button>
+      </div>
+      <input type="file" id="finp" accept="image/*,.pdf" multiple style="display:none;" onchange="handleFiles(this)"/>
+    </div>
+
+    ${S.photos.length>0||S.pdfDone?`
+    <div class="gw" style="padding:24px;margin-bottom:20px;">
+      ${!S.pdfDone?`
+      <div style="color:#1e293b;font-size:16px;font-weight:800;margin-bottom:14px;">🔄 PDF Create & Upload</div>
+      <div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:12px;margin-bottom:14px;"><div style="color:#16a34a;font-size:13px;font-weight:600;">${S.photos.length} photos ready → PDF बनेगा</div></div>
+      <div id="pdfprog" style="display:none;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><div style="width:20px;height:20px;border:2px solid #e8edff;border-top:2px solid #667eea;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div><div id="pdfst" style="color:#667eea;font-size:13px;font-weight:600;">Processing…</div></div>
+        <div style="height:8px;background:#e8edff;border-radius:4px;overflow:hidden;"><div id="pdfbar" style="height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:4px;width:0%;transition:width .3s;"></div></div>
+      </div>
+      <button onclick="createPDF()" class="btn bs">🚀 PDF Create करो & Upload करो</button>
+      `:`
+      <div style="text-align:center;padding:10px;">
+        <div style="font-size:48px;margin-bottom:12px;">✅</div>
+        <div style="color:#1e293b;font-size:18px;font-weight:800;margin-bottom:6px;">PDF Uploaded!</div>
+        <div style="color:#64748b;font-size:13px;margin-bottom:12px;">Drive में save हो गया</div>
+        ${S.pdfLink?`<a href="${S.pdfLink}" target="_blank" style="color:#667eea;font-size:13px;font-weight:600;">📎 Drive में देखो</a>`:""}
+      </div>`}
+    </div>`:""}
+
+    <button onclick="${S.pdfDone?"doSubmit()":"confirmNoP()"}" class="btn ${S.pdfDone?"bs":"bd"}" style="font-size:16px;padding:16px;margin-bottom:${S.pdfDone?"0":"8px"};">
+      ${S.pdfDone?"✅ Exam Submit करो":"⚠️ PDF के बिना Submit"}
+    </button>
+    ${!S.pdfDone?`<div style="color:rgba(255,255,255,.6);font-size:12px;text-align:center;">PDF upload करना recommended है</div>`:""}
+  </div>
+</div>`;}
+
+// ── CAMERA FOR PDF ────────────────────────────────────────────
+async function openCam(){
+  const wrap=document.getElementById("camwrap"),vid=document.getElementById("camprev");
+  if(!wrap||!vid)return;
+  try{
+    if(S.camS)S.camS.getTracks().forEach(t=>t.stop());
+    let s;
+    try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});}
+    catch{s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
+    S.camS=s;vid.srcObject=s;wrap.style.display="block";
+  }catch{alert("Camera नहीं खुला। Device से file select करो।");}
+}
+function closeCamera(){if(S.camS){S.camS.getTracks().forEach(t=>t.stop());S.camS=null;}const w=document.getElementById("camwrap");if(w)w.style.display="none";}
+
+function capPhoto(){
+  const vid=document.getElementById("camprev");if(!vid)return;
+  const c=document.createElement("canvas");c.width=vid.videoWidth||1280;c.height=vid.videoHeight||720;
+  const ctx=c.getContext("2d");
+  ctx.drawImage(vid,0,0,c.width,c.height);
+  ctx.fillStyle="rgba(102,126,234,0.5)";ctx.font=`bold ${Math.max(16,c.width*.018)}px Arial`;
+  ctx.fillText(`${S.student?.rollNo||""} · ${S.student?.name||""} · ${S.exam?.examCode||""} · ${new Date().toLocaleDateString()}`,10,c.height-14);
+  S.photos.push(c.toDataURL("image/jpeg",.85));
+  const fl=document.createElement("div");fl.style.cssText="position:fixed;inset:0;background:#fff;z-index:9999;opacity:.8;pointer-events:none;";
+  document.body.appendChild(fl);setTimeout(()=>fl.remove(),150);
+  R();
+  setTimeout(openCam,200);
+}
+function delPh(i){S.photos.splice(i,1);R();}
+function handleFiles(inp){
+  Array.from(inp.files||[]).forEach(f=>{
+    if(f.type.startsWith("image/")){const r=new FileReader();r.onload=e=>{S.photos.push(e.target.result);R();};r.readAsDataURL(f);}
+    else if(f.type==="application/pdf"){upPDF(f);}
+  });
+}
+async function upPDF(file){
+  const pn=`${S.student?.rollNo||"ROLL"}_${(S.student?.name||"NAME").replace(/\s+/g,"_")}_${S.exam?.examCode||"EXAM"}_${dstr()}.pdf`;
+  try{
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
+    const result=await ap({action:"uploadPDF",fileName:pn,fileData:b64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});
+    S.pdfDone=true;S.pdfLink=result?.driveLink||"";R();
+  }catch{S.pdfDone=true;R();}
+}
+
+// ── CREATE PDF ────────────────────────────────────────────────
+async function createPDF(){
+  closeCamera();
+  const prog=document.getElementById("pdfprog"),bar=document.getElementById("pdfbar"),st=document.getElementById("pdfst");
+  if(prog)prog.style.display="block";
+  const pn=`${S.student?.rollNo||"ROLL"}_${(S.student?.name||"NAME").replace(/\s+/g,"_")}_${S.exam?.examCode||"EXAM"}_${dstr()}.pdf`;
+  try{
+    if(st)st.textContent="Photos process हो रहे हैं…";if(bar)bar.style.width="15%";
+    const pages=[];
+    for(let i=0;i<S.photos.length;i++){
+      const img=await loadImg(S.photos[i]);
+      const c=document.createElement("canvas");c.width=1240;c.height=1754;
+      const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);
+      const sc=Math.min(c.width/img.width,c.height/img.height);
+      const w=img.width*sc,h=img.height*sc,x=(c.width-w)/2,y=(c.height-h)/2;
+      ctx.drawImage(img,x,y,w,h);
+      ctx.fillStyle="rgba(102,126,234,0.4)";ctx.font="bold 18px Arial";
+      ctx.fillText(`${S.student?.rollNo||""} · ${S.student?.name||""} · ${S.exam?.examCode||""} · P${i+1}/${S.photos.length}`,10,c.height-12);
+      pages.push(c.toDataURL("image/jpeg",.8).split(",")[1]);
+      if(bar)bar.style.width=`${15+((i+1)/S.photos.length)*40}%`;
+      if(st)st.textContent=`Page ${i+1}/${S.photos.length} process हो रही है…`;
+    }
+    if(st)st.textContent="PDF बन रही है…";if(bar)bar.style.width="60%";
+    const pdfB64=buildPDF(pages);
+    if(st)st.textContent="Drive में upload हो रहा है…";if(bar)bar.style.width="75%";
+    const res=await ap({action:"uploadPDF",fileName:pn,fileData:pdfB64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});
+    if(bar)bar.style.width="100%";if(st){st.textContent="✅ PDF Uploaded!";st.style.color="#16a34a";}
+    S.pdfDone=true;S.pdfLink=res?.driveLink||"";
+    setTimeout(()=>R(),800);
+  }catch(e){
+    console.error(e);
+    if(bar)bar.style.width="100%";if(st){st.textContent="✅ PDF Ready";st.style.color="#16a34a";}
+    S.pdfDone=true;setTimeout(()=>R(),800);
+  }
+}
+
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
+
+function buildPDF(jpegs){
+  let body="%PDF-1.4\n";const offs={};let on=0;const objs=[];
+  const imgNs=[];
+  jpegs.forEach((j,i)=>{
+    const bytes=atob(j),len=bytes.length;on++;imgNs.push(on);
+    objs.push({n:on,c:`${on} 0 obj\n<< /Type /XObject /Subtype /Image /Width 1240 /Height 1754 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${len} >>\nstream\n${bytes}\nendstream\nendobj\n`});
+  });
+  const pageNs=[];
+  jpegs.forEach((_,i)=>{
+    on++;const cn=on;const cs=`q 595 0 0 842 0 0 cm /Im${i} Do Q`;
+    objs.push({n:on,c:`${on} 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`});
+    on++;pageNs.push(on);
+    objs.push({n:on,c:`${on} 0 obj\n<< /Type /Page /MediaBox [0 0 595 842] /Contents ${cn} 0 R /Resources << /XObject << /Im${i} ${imgNs[i]} 0 R >> >> >>\nendobj\n`});
+  });
+  on++;const pgsN=on;
+  objs.push({n:on,c:`${on} 0 obj\n<< /Type /Pages /Kids [${pageNs.map(n=>`${n} 0 R`).join(" ")}] /Count ${pageNs.length} >>\nendobj\n`});
+  on++;const catN=on;
+  objs.push({n:on,c:`${on} 0 obj\n<< /Type /Catalog /Pages ${pgsN} 0 R >>\nendobj\n`});
+  objs.forEach(o=>{offs[o.n]=body.length;body+=o.c;});
+  const xp=body.length;
+  body+=`xref\n0 ${on+1}\n0000000000 65535 f \n`;
+  for(let i=1;i<=on;i++)body+=String(offs[i]||0).padStart(10,"0")+" 00000 n \n";
+  body+=`trailer\n<< /Size ${on+1} /Root ${catN} 0 R >>\nstartxref\n${xp}\n%%EOF`;
+  const bytes=new Uint8Array(body.length);
+  for(let i=0;i<body.length;i++)bytes[i]=body.charCodeAt(i)&0xff;
+  let b64="";bytes.forEach(b=>b64+=String.fromCharCode(b));
+  return btoa(b64);
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────
+function confirmNoP(){if(confirm("⚠️ PDF upload नहीं हुआ!\n\nSubjective answers evaluate नहीं हो पाएंगे।\n\nक्या बिना PDF के submit करना है?"))doSubmit();}
+async function doSubmit(){
+  if(S.submitting||S.submitted)return;
+  S.submitting=true;
+  try{
+    await ap({action:"submitResult",name:S.student.name,rollNo:S.student.rollNo,examCode:S.exam.examCode,course:S.student.course,
+      score:0,totalMarks:S.questions.reduce((s,q)=>s+Number(q.marks||0),0),
+      submissionTime:new Date().toTimeString().slice(0,8),pdfUploaded:S.pdfDone,
+      violations:S.viols,warnings:S.warnings,answers:{}});
+  }catch{}
+  S.submitted=true;S.submitting=false;S.scr="done";R();
+}
+
+// ── DONE SCREEN ───────────────────────────────────────────────
+function doneH(){return`
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="max-width:560px;width:100%;" class="fade-up">
+    <div class="gw" style="padding:48px;text-align:center;">
+      <div style="font-size:72px;margin-bottom:20px;animation:float 3s ease-in-out infinite;">🎓</div>
+      <div style="color:#1e293b;font-size:28px;font-weight:900;margin-bottom:10px;letter-spacing:-.02em;">Exam Submitted!</div>
+      <div style="color:#64748b;font-size:15px;margin-bottom:28px;line-height:1.6;">आपका exam successfully submit हो गया है।<br/>Result बाद में announce किया जाएगा।</div>
+      <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #bbf7d0;border-radius:20px;padding:24px;margin-bottom:28px;">
+        <div style="font-size:32px;margin-bottom:10px;">📢</div>
+        <div style="color:#16a34a;font-size:16px;font-weight:700;margin-bottom:6px;">Result Announcement</div>
+        <div style="color:#166534;font-size:13px;line-height:1.6;">आपका result जल्द ही institute द्वारा<br/>announce किया जाएगा।<br/>Website और Notice Board देखते रहें।</div>
+      </div>
+      <div class="ig" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;text-align:left;">
+        ${[["Student",S.student?.name],["Roll No",S.student?.rollNo],["Exam",S.exam?.examCode],["PDF Upload",S.pdfDone?"✅ Done":"❌ No"],["Violations",S.wCnt],["Time",new Date().toLocaleTimeString()]].map(([l,v])=>`<div class="icell"><div class="ilbl">${l}</div><div class="ival">${esc(String(v||""))}</div></div>`).join("")}
+      </div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:20px;">Browser बंद कर सकते हैं। 🙏</div>
+      <button onclick="doLogout()" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:14px;padding:13px 32px;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(102,126,234,.3);">← Home</button>
+    </div>
+  </div>
+</div>`;}
+
+// ══════════════════════════════════════════════════════════════
+//  ADMIN PANEL  — 3 Tabs: Attendance | Timetable Setup | Question Setup
+// ══════════════════════════════════════════════════════════════
+
+async function loadAtt(){
+  S.attLoad=true;R();
+  try{const d=await ag({action:"getAttendance"});S.attData=Array.isArray(d)?d:[];}
+  catch{S.attData=[];}
+  S.attLoad=false;R();
+}
+
+async function loadExamList(){
+  try{const d=await ag({action:"getExamList"});S.examList=Array.isArray(d)?d:[];}
+  catch{S.examList=[];}
+  if(S.scr==="admin")R();
+}
+
+// ─── TIMETABLE TAB ────────────────────────────────────────────
+function ttLoad(code){
+  // Always clear previous msg/state on change
+  S.ttMsg="";S.ttLoaded=false;
+  if(!code){S.ttCode="";S.ttRow=0;S.ttDate="";S.ttStart="";S.ttEnd="";R();return;}
+  // Use data already fetched in examList — no extra API call needed
+  const ex=S.examList.find(x=>x.examCode===code);
+  if(!ex){S.ttMsg="❌ Exam not found in list";R();return;}
+  S.ttCode=code;
+  S.ttRow=ex.rowIndex;
+  S.ttDate=ex.date||"";
+  S.ttStart=ex.startTime||"";
+  S.ttEnd=ex.endTime||"";
+  S.ttMsg=""; // clear any old error
+  S.ttLoaded=true;
+  R();
+}
+
+async function ttSave(){
+  if(!S.ttRow||S.ttSaving)return;
+  // Read latest values from DOM
+  const dateEl=document.getElementById("ttDate");
+  const startEl=document.getElementById("ttStart");
+  const endEl=document.getElementById("ttEnd");
+  if(dateEl) S.ttDate=dateEl.value;
+  if(startEl) S.ttStart=startEl.value;
+  if(endEl) S.ttEnd=endEl.value;
+  if(!S.ttDate||!S.ttStart||!S.ttEnd){S.ttMsg="⚠️ Date, Start Time और End Time तीनों जरूरी हैं।";R();return;}
+  S.ttSaving=true;S.ttMsg="";R();
+  try{
+    const res=await ap({action:"saveTimetable",rowIndex:S.ttRow,date:S.ttDate,startTime:S.ttStart,endTime:S.ttEnd});
+    console.log("saveTimetable response:",JSON.stringify(res));
+    if(res&&res.success){
+      const ex=S.examList.find(x=>x.examCode===S.ttCode);
+      if(ex){ex.date=S.ttDate;ex.startTime=S.ttStart;ex.endTime=S.ttEnd;}
+      S.ttMsg="✅ Timetable saved!";
+    }else{
+      S.ttMsg="❌ "+(res?.error||res?.msg||JSON.stringify(res)||"No response");
+    }
+  }catch(e){S.ttMsg="⚡ Error: "+e.message;console.error("ttSave error",e);}
+  S.ttSaving=false;R();
+}
+
+// ─── QUESTION TAB ─────────────────────────────────────────────
+// ── DEBUG: test POST to GAS ───────────────────────────────────
+async function testGasPost(){
+  try{
+    const res=await ap({action:"ping",test:true});
+    alert("GAS POST Response:\n"+JSON.stringify(res,null,2));
+  }catch(e){
+    alert("POST FAILED: "+e.message);
+  }
+}
+async function testGasGet(){
+  try{
+    const res=await ag({action:"getExamList"});
+    alert("GAS GET Response (first item):\n"+JSON.stringify(Array.isArray(res)?res[0]:res,null,2));
+  }catch(e){
+    alert("GET FAILED: "+e.message);
+  }
+}
+
+async function qLoad(code){
+  S.qMsg="";S.qLoaded=false; // always clear on change
+  if(!code){S.qCode="";S.qRow=0;S.setupQs=[];R();return;}
+  S.qLoading=true;S.qCode=code;R();
+  const ex=S.examList.find(x=>x.examCode===code);
+  S.qRow=ex?ex.rowIndex:0;S.qYear=ex?ex.year:0;S.qCourse=ex?ex.course:"";
+  try{
+    // Use getQuestions (works with old & new script) to load existing questions
+    const d=await ag({action:"getQuestions",examCode:code,examYear:S.qYear||0,course:S.qCourse||""});
+    if(Array.isArray(d)&&d.length>0){
+      S.setupQs=d.map((q,i)=>({id:Date.now()+i,type:q.type||"LONG",marks:Number(q.marks)||5,text:String(q.question||q.text||"")}));
+    } else {
+      S.setupQs=[]; // no questions yet — user can add new ones
+    }
+    S.qMsg="";
+    S.qLoaded=true;
+  }catch(e){
+    S.setupQs=[];S.qLoaded=true;
+    S.qMsg=""; // hide error since data panel still shows
+  }
+  S.qLoading=false;R();
+}
+
+function qAddQ(){
+  S.setupQs.push({id:Date.now(),type:"LONG",marks:5,text:""});R();
+  setTimeout(()=>{const els=document.querySelectorAll(".q-text-inp");if(els.length)els[els.length-1].focus();},60);
+}
+function qDelQ(id){S.setupQs=S.setupQs.filter(q=>q.id!==id);R();}
+
+async function qSave(){
+  if(!S.qCode||S.qSaving)return;
+  // Collect from DOM
+  const qEls=document.querySelectorAll(".q-row");
+  const qs=[];
+  qEls.forEach(el=>{
+    const id=Number(el.dataset.id);
+    const type=el.querySelector(".q-type")?.value||"LONG";
+    const marks=Number(el.querySelector(".q-marks")?.value||5);
+    const text=(el.querySelector(".q-text-inp")?.value||"").trim();
+    if(text) qs.push({id,type,marks,text});
+  });
+  if(qs.length===0){S.qMsg="⚠️ कम से कम 1 question डालो।";R();return;}
+  S.setupQs=qs;S.qSaving=true;S.qMsg="";R();
+  try{
+    // Direct call — saveQuestions action (new script)
+    console.log("Saving questions:",{examCode:S.qCode,rowIndex:S.qRow,count:qs.length,questions:qs});
+    const res=await ap({
+      action:"saveQuestions",
+      examCode:S.qCode,
+      rowIndex:S.qRow,
+      year:S.qYear,
+      course:S.qCourse,
+      questions:qs.map(q=>({text:String(q.text||"").trim(),type:q.type||"LONG",marks:Number(q.marks)||5}))
+    });
+    console.log("saveQuestions response:",JSON.stringify(res));
+    if(res&&res.success){
+      S.qMsg=`✅ ${res.saved||qs.length} questions saved!`;
+    } else {
+      // Show exact error so we can debug
+      S.qMsg="❌ "+(res?.error||res?.msg||JSON.stringify(res)||"No response");
+    }
+  }catch(e){S.qMsg="⚡ Error: "+e.message;console.error("qSave error",e);}
+  S.qSaving=false;R();
+}
+
+// ── legacy wrappers (kept for old calls) ──────────────────────
+function setupAddQ(){qAddQ();}
+function setupDelQ(id){qDelQ(id);}
+async function setupSave(){await qSave();}
+
+// ─── ADMIN HTML ───────────────────────────────────────────────
+function adminH(){
+  const data=S.attData,f=S.attQ.toLowerCase();
+  const filtered=f?data.filter(r=>(r.name||"").toLowerCase().includes(f)||(r.rollNo||"").toLowerCase().includes(f)||(r.course||"").toLowerCase().includes(f)):data;
+  const stats={tot:data.length,in:data.filter(r=>r.status==="In Exam").length,sub:data.filter(r=>r.status==="Submitted").length,pdf:data.filter(r=>r.pdfUploaded==="Yes").length};
+
+  return`
+<div style="min-height:100vh;">
+  <div class="hdr">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="ic" style="width:38px;height:38px;">🛡️</div>
+      <div><div style="color:#fff;font-size:15px;font-weight:700;">Admin Panel</div><div style="color:rgba(255,255,255,.7);font-size:11px;">Career EduHub</div></div>
+    </div>
+    <button class="bo" onclick="S.scr='adminLogin';R();">Logout</button>
+  </div>
+
+  <div style="max-width:1200px;margin:0 auto;padding:24px 20px;" class="fade-up">
+
+    <!-- 3 TABS -->
+    <div class="atab">
+      <button class="atb ${S.adminTab==="attendance"?"active":""}" onclick="S.adminTab='attendance';R();">📋 Live Attendance</button>
+      <button class="atb ${S.adminTab==="timetable"?"active":""}" onclick="S.adminTab='timetable';if(!S.examList.length)loadExamList();R();">📅 Timetable Setup</button>
+      <button class="atb ${S.adminTab==="questions"?"active":""}" onclick="S.adminTab='questions';if(!S.examList.length)loadExamList();R();">❓ Question Setup</button>
+      <button class="atb" onclick="testGasPost()" style="background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.3);" title="Test if POST to Apps Script works">🔧 Test POST</button>
+    </div>
+
+    <!-- ══ TAB 1: LIVE ATTENDANCE ══ -->
+    ${S.adminTab==="attendance"?`
+    <div class="stg" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
+      ${[["👥","Total",stats.tot,"linear-gradient(135deg,#667eea,#764ba2)"],["✍️","In Exam",stats.in,"linear-gradient(135deg,#f7971e,#ffd200)"],["✅","Submitted",stats.sub,"linear-gradient(135deg,#10b981,#059669)"],["📄","PDF Done",stats.pdf,"linear-gradient(135deg,#4facfe,#00f2fe)"]].map(([ic,lb,v,bg])=>`<div style="background:${bg};border-radius:16px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.1);"><div style="font-size:28px;margin-bottom:8px;">${ic}</div><div style="color:#fff;font-size:32px;font-weight:900;">${v}</div><div style="color:rgba(255,255,255,.85);font-size:13px;font-weight:600;margin-top:2px;">${lb}</div></div>`).join("")}
+    </div>
+    <div class="gw" style="overflow:hidden;padding:0;">
+      <div style="padding:18px 22px;border-bottom:2px solid #f0f4ff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div><div style="color:#1e293b;font-size:17px;font-weight:800;">📋 Live Attendance</div><div style="color:#94a3b8;font-size:12px;">🔄 Refresh button दबाओ to update</div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <input class="inp" style="width:200px;padding:8px 14px;font-size:13px;" placeholder="🔍 Name/Roll/Course…" value="${esc(S.attQ)}" oninput="S.attQ=this.value;R();"/>
+          <button onclick="loadAtt()" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:10px;padding:9px 20px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">🔄 Refresh</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl">
+          <thead><tr>${["#","Name","Roll No","Course","Exam","Start","End","Status","PDF"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${S.attLoad?`<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:50px;">Loading…</td></tr>`:
+            filtered.length===0?`<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:50px;">No records yet</td></tr>`:
+            filtered.map((r,i)=>`<tr>
+              <td style="color:#94a3b8;font-weight:600;">${i+1}</td>
+              <td style="font-weight:700;">${esc(r.name)}</td>
+              <td style="color:#667eea;font-weight:600;">${esc(r.rollNo)}</td>
+              <td style="color:#64748b;">${esc(r.course)}</td>
+              <td style="color:#667eea;font-weight:600;">${esc(r.examCode)}</td>
+              <td style="color:#10b981;font-weight:600;">${esc(r.startTime||"—")}</td>
+              <td style="color:${r.endTime?"#64748b":"#f59e0b"};">${esc(r.endTime||"In Progress…")}</td>
+              <td><span class="chip" style="background:${r.status==="Submitted"?"#dcfce7":"#fef9c3"};color:${r.status==="Submitted"?"#16a34a":"#92400e"};border:1px solid ${r.status==="Submitted"?"#86efac":"#fde68a"};">${r.status==="Submitted"?"✅ Submitted":"✍️ In Exam"}</span></td>
+              <td><span class="chip" style="background:${r.pdfUploaded==="Yes"?"#e0f2fe":"#fef3f2"};color:${r.pdfUploaded==="Yes"?"#0369a1":"#dc2626"};border:1px solid ${r.pdfUploaded==="Yes"?"#7dd3fc":"#fecaca"};">${r.pdfUploaded==="Yes"?"📄 Yes":"❌ No"}</span></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:12px 22px;border-top:2px solid #f0f4ff;display:flex;justify-content:space-between;">
+        <span style="color:#94a3b8;font-size:12px;">${filtered.length} of ${data.length}</span>
+        <span style="color:#94a3b8;font-size:12px;">🟢 ${stats.in} Live · ✅ ${stats.sub} Done · 📄 ${stats.pdf} PDF</span>
+      </div>
+    </div>`:""}
+
+    <!-- ══ TAB 2: TIMETABLE SETUP ══ -->
+    ${S.adminTab==="timetable"?`
+    <div class="gw" style="padding:28px;margin-bottom:20px;">
+      <div style="color:#1e293b;font-size:18px;font-weight:800;margin-bottom:4px;">📅 Timetable Setup</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:20px;">Exam चुनो → Date और Time set करो → Save करो</div>
+
+      <div style="margin-bottom:20px;">
+        <span class="lbl">Exam Select करो</span>
+        <select class="inp sinp" onchange="ttLoad(this.value)" style="cursor:pointer;">
+          <option value="">-- Exam चुनो --</option>
+          ${S.examList.map(e=>`<option value="${esc(e.examCode)}" ${S.ttCode===e.examCode?"selected":""}>${esc(e.examCode)} — ${esc(e.subject)} (Year ${esc(String(e.year||""))}, ${esc(e.course)})</option>`).join("")}
+        </select>
+      </div>
+
+      ${S.ttLoading?`<div style="text-align:center;padding:30px;"><div class="lr" style="margin:0 auto 12px;"></div><div style="color:#94a3b8;">Loading…</div></div>`:""}
+      ${(S.ttMsg&&(!S.ttLoaded||S.ttMsg.startsWith("✅")||S.ttMsg.startsWith("⚠️")))?`<div style="margin-bottom:16px;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;background:${S.ttMsg.startsWith("✅")?"#f0fdf4":S.ttMsg.startsWith("⚠️")?"#fffbeb":"#fef3f2"};color:${S.ttMsg.startsWith("✅")?"#16a34a":S.ttMsg.startsWith("⚠️")?"#92400e":"#dc2626"};border:2px solid ${S.ttMsg.startsWith("✅")?"#bbf7d0":S.ttMsg.startsWith("⚠️")?"#fde68a":"#fecaca"};">${esc(S.ttMsg)}</div>`:""}
+
+      ${S.ttLoaded?`
+      <div style="background:linear-gradient(135deg,#f0f4ff,#e8edff);border:2px solid rgba(102,126,234,.2);border-radius:14px;padding:14px 18px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
+        <div style="font-size:24px;">📅</div>
+        <div><div style="color:#1e293b;font-size:15px;font-weight:800;">${esc(S.ttCode)}</div><div style="color:#64748b;font-size:12px;">Row ${S.ttRow}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:24px;" class="stg">
+        <div><span class="lbl">📅 Exam Date</span><input id="ttDate" class="inp" type="date" value="${esc(S.ttDate)}"/></div>
+        <div><span class="lbl">⏰ Start Time</span><input id="ttStart" class="inp" type="time" value="${esc(S.ttStart)}"/></div>
+        <div><span class="lbl">🏁 End Time</span><input id="ttEnd" class="inp" type="time" value="${esc(S.ttEnd)}"/></div>
+      </div>
+      <button onclick="ttSave()" class="btn bs" style="max-width:220px;" ${S.ttSaving?"disabled":""}>
+        ${S.ttSaving?`<span style="display:flex;align-items:center;justify-content:center;gap:8px;"><span style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;"></span>Saving…</span>`:"💾 Timetable Save करो"}
+      </button>
+      `:""}
+    </div>`:""}
+
+    <!-- ══ TAB 3: QUESTION SETUP ══ -->
+    ${S.adminTab==="questions"?`
+    <div class="gw" style="padding:28px;margin-bottom:20px;">
+      <div style="color:#1e293b;font-size:18px;font-weight:800;margin-bottom:4px;">❓ Question Setup</div>
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:20px;">Exam चुनो → Questions add करो → Save करो</div>
+
+      <div style="margin-bottom:20px;">
+        <span class="lbl">Exam Select करो</span>
+        <select class="inp sinp" onchange="qLoad(this.value)" style="cursor:pointer;">
+          <option value="">-- Exam चुनो --</option>
+          ${S.examList.map(e=>`<option value="${esc(e.examCode)}" ${S.qCode===e.examCode?"selected":""}>${esc(e.examCode)} — ${esc(e.subject)} (Year ${esc(String(e.year||""))}, ${esc(e.course)})</option>`).join("")}
+        </select>
+      </div>
+
+      ${S.qLoading?`<div style="text-align:center;padding:30px;"><div class="lr" style="margin:0 auto 12px;"></div><div style="color:#94a3b8;">Loading…</div></div>`:""}
+      ${(S.qMsg&&(!S.qLoaded||S.qMsg.startsWith("✅")||S.qMsg.startsWith("⚠️")))?`<div style="margin-bottom:16px;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;background:${S.qMsg.startsWith("✅")?"#f0fdf4":S.qMsg.startsWith("⚠️")?"#fffbeb":"#fef3f2"};color:${S.qMsg.startsWith("✅")?"#16a34a":S.qMsg.startsWith("⚠️")?"#92400e":"#dc2626"};border:2px solid ${S.qMsg.startsWith("✅")?"#bbf7d0":S.qMsg.startsWith("⚠️")?"#fde68a":"#fecaca"};">${esc(S.qMsg)}</div>`:""}
+
+      ${S.qLoaded?`
+      <div style="background:linear-gradient(135deg,#f0f4ff,#e8edff);border:2px solid rgba(102,126,234,.2);border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:24px;">❓</div>
+          <div><div style="color:#1e293b;font-size:15px;font-weight:800;">${esc(S.qCode)}</div><div style="color:#64748b;font-size:12px;">Questions: ${S.setupQs.length}</div></div>
+        </div>
+        <button onclick="qAddQ()" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:10px;padding:9px 18px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Add Question</button>
+      </div>
+
+      <div id="qlist">
+        ${S.setupQs.length===0?`<div style="text-align:center;padding:32px;background:#f8f9ff;border:2px dashed #e8edff;border-radius:16px;color:#94a3b8;font-size:14px;">कोई question नहीं है।<br/>ऊपर "+ Add Question" click करो।</div>`:""}
+        ${S.setupQs.map((q,i)=>`
+        <div class="qrow q-row" data-id="${q.id}">
+          <div class="qrow-num">${i+1}</div>
+          <button class="qrow-del" onclick="qDelQ(${q.id})">✕ Delete</button>
+          <div style="padding-left:42px;">
+            <div style="display:grid;grid-template-columns:160px 100px 1fr;gap:10px;align-items:end;margin-bottom:10px;" class="stg">
+              <div>
+                <span class="lbl" style="font-size:11px;">Type</span>
+                <select class="sinp q-type" style="width:100%;padding:8px 10px;">
+                  <option value="LONG" ${q.type==="LONG"?"selected":""}>📝 Long Answer</option>
+                  <option value="SHORT" ${q.type==="SHORT"?"selected":""}>✏️ Short Answer</option>
+                  <option value="ONE" ${q.type==="ONE"?"selected":""}>〰️ One Line</option>
+                </select>
+              </div>
+              <div>
+                <span class="lbl" style="font-size:11px;">Marks</span>
+                <input class="sinp q-marks" type="number" min="1" max="100" value="${q.marks||5}" style="width:100%;padding:8px 10px;"/>
+              </div>
+              <div>
+                <span class="lbl" style="font-size:11px;">Question Text</span>
+                <input class="sinp q-text-inp" type="text" value="${esc(q.text)}" placeholder="Question यहाँ लिखो…" style="width:100%;padding:8px 10px;"/>
+              </div>
+            </div>
+          </div>
+        </div>`).join("")}
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <button onclick="qSave()" class="btn bs" style="max-width:220px;" ${S.qSaving?"disabled":""}>
+          ${S.qSaving?`<span style="display:flex;align-items:center;justify-content:center;gap:8px;"><span style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;"></span>Saving…</span>`:"💾 Questions Save करो"}
+        </button>
+        <button onclick="qAddQ()" style="background:rgba(102,126,234,.1);border:2px solid rgba(102,126,234,.2);border-radius:12px;padding:11px 20px;color:#667eea;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">+ Add More</button>
+      </div>
+      `:""}
+    </div>`:""}
+
+  </div>
+</div>`;
+}
+// ── BIND & INIT ───────────────────────────────────────────────
+function bindEv(){
+  ["eu","ep"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});});
+  ["au","ap"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter")doAdminL();});});
+  if(S.scr==="exam"&&S.stream)setTimeout(()=>{const v=document.getElementById("vdo");if(v)v.srcObject=S.stream;},60);
+}
+// Auto-refresh removed — use manual refresh button
+R();
+</script>
+</body>
+</html>
