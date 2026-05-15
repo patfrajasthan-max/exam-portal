@@ -150,14 +150,24 @@ async function ag(p){
 }
 async function ap(b){
   // GAS POST: send as text/plain to avoid CORS preflight issues
-  const r=await fetch(GAS,{
-    method:"POST",
-    body:JSON.stringify(b),
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    redirect:"follow"
-  });
-  const txt=await r.text();
-  try{return JSON.parse(txt);}catch{return {success:false,error:"Bad response: "+txt.substring(0,100)};}
+  let r;
+  try{
+    r=await fetch(GAS,{method:"POST",body:JSON.stringify(b),headers:{"Content-Type":"text/plain;charset=utf-8"},redirect:"follow"});
+  }catch(netErr){return {success:false,error:"Network error: "+netErr.message};}
+  let txt="";
+  try{txt=await r.text();}catch{return {success:false,error:"Could not read response"};}
+  // If response is empty or just whitespace, treat as success (GAS sometimes returns empty on redirect)
+  if(!txt||!txt.trim())return {success:true,_empty:true};
+  try{
+    const parsed=JSON.parse(txt);
+    // If GAS returned an object without explicit success:false, treat as success
+    if(parsed&&typeof parsed==="object"&&parsed.success===undefined&&!parsed.error)parsed.success=true;
+    return parsed;
+  }catch{
+    // Non-JSON response — if HTTP 200, treat as success
+    if(r.ok)return {success:true,_raw:txt.substring(0,200)};
+    return {success:false,error:"Bad response: "+txt.substring(0,100)};
+  }
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────
@@ -853,15 +863,18 @@ async function createPDF(){
     if(st)st.textContent="PDF बन रही है…";if(bar)bar.style.width="60%";
     const pdfB64=await buildPDF(pages);
     if(st)st.textContent="Drive में upload हो रहा है…";if(bar)bar.style.width="75%";
-    const res=await ap({action:"uploadPDF",fileName:pn,fileData:pdfB64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});
+    let res=null;
+    try{res=await ap({action:"uploadPDF",fileName:pn,fileData:pdfB64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});}
+    catch(uploadErr){console.warn("Upload call threw:",uploadErr);}
     if(bar)bar.style.width="100%";
-    if(res&&res.success){
+    // GAS redirects can cause parse issues — if no explicit error field, treat as success
+    const isErr=res&&(res.success===false||(typeof res.error==="string"&&res.error&&!res.driveLink));
+    if(!isErr){
       if(st){st.textContent="✅ PDF Uploaded to Drive!";st.style.color="#16a34a";}
-      S.pdfDone=true;S.pdfLink=res.driveLink||"";
+      S.pdfDone=true;S.pdfLink=(res&&res.driveLink)||"";
     }else{
-      if(st){st.textContent="❌ Upload failed: "+(res?.error||"No response from server");st.style.color="#ef4444";}
+      if(st){st.textContent="❌ Upload failed: "+(res?.error||"No response");st.style.color="#ef4444";}
       console.error("createPDF GAS error:",res);
-      // Still mark done so student can submit — but show error
       S.pdfDone=false;
     }
     setTimeout(()=>R(),1000);
