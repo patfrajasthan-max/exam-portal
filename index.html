@@ -246,10 +246,22 @@ async function loadExam(){
   try{
     const st=S.student;
     const exams=await ag({action:"getExams",examYear:st.examYear||1,course:st.course||""});
-    // Store all exams for timetable display — sort by date
-    S.allExams=Array.isArray(exams)?exams.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))):[];
+    // Strict frontend filter — sirf same course + same year ke exams
+    const myCourse=(st.course||"").trim().toLowerCase();
+    const myYear=parseInt(st.examYear||1);
+    const filtered=(Array.isArray(exams)?exams:[]).filter(x=>{
+      const xCourse=String(x.course||"").trim().toLowerCase();
+      const xYear=parseInt(x.year||0);
+      // Course match: full string contains check (both ways)
+      const courseMatch=xCourse&&myCourse&&(xCourse.includes(myCourse)||myCourse.includes(xCourse));
+      // Year match: same year, or exam has no year set (0)
+      const yearMatch=xYear===0||xYear===myYear;
+      return courseMatch&&yearMatch;
+    });
+    // Sort by date
+    S.allExams=filtered.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     const now=new Date(),ts=tod();
-    const e=(exams||[]).find(x=>String(x.date).slice(0,10)===ts);
+    const e=filtered.find(x=>String(x.date).slice(0,10)===ts);
     if(!e){S.eStatus="none";S.eMsg="📅 आज कोई Exam Schedule नहीं है";S.exam=null;}
     else{
       const s2=pt(e.startTime),en=pt(e.endTime);S.exam=e;
