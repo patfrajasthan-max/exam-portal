@@ -99,6 +99,7 @@ let S={
   tLeft:0, wCnt:0, warnings:[], viols:[],
   pdfDone:false, pdfLink:"", submitting:false, submitted:false,
   eStatus:"loading", eMsg:"", photos:[],
+  allExams:[], // all exams for this student (for timetable view)
   attData:[], attLoad:true, attQ:"",
   tIv:null, aIv:null, fIv:null, stream:null, camS:null,
   // Admin tabs: attendance | timetable | questions
@@ -133,6 +134,11 @@ function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").
 function fmt(n){return Number(n||0).toLocaleString("en-IN");}
 function tod(){return new Date().toLocaleDateString("en-CA");}
 function dstr(){return new Date().toISOString().slice(0,10).replace(/-/g,"");}
+// Live clock string
+function nowStr(){const d=new Date();return d.toLocaleDateString("en-IN",{weekday:"short",day:"2-digit",month:"short",year:"numeric"})+" · "+d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"});}
+let _clockIv=null;
+function startClock(){clearInterval(_clockIv);_clockIv=setInterval(()=>{const el=document.getElementById("live-clock");if(el)el.textContent=nowStr();},1000);}
+function clockChip(){return `<span id="live-clock" style="color:rgba(255,255,255,.85);font-size:12px;font-weight:600;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:4px 10px;white-space:nowrap;">${nowStr()}</span>`;}
 
 // ── API ───────────────────────────────────────────────────────
 async function ag(p){
@@ -240,6 +246,8 @@ async function loadExam(){
   try{
     const st=S.student;
     const exams=await ag({action:"getExams",examYear:st.examYear||1,course:st.course||""});
+    // Store all exams for timetable display — sort by date
+    S.allExams=Array.isArray(exams)?exams.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))):[];
     const now=new Date(),ts=tod();
     const e=(exams||[]).find(x=>String(x.date).slice(0,10)===ts);
     if(!e){S.eStatus="none";S.eMsg="📅 आज कोई Exam Schedule नहीं है";S.exam=null;}
@@ -267,7 +275,7 @@ function dashH(){
       <div class="ic" style="width:38px;height:38px;">🎓</div>
       <div><div style="color:#fff;font-size:15px;font-weight:700;">Exam Portal</div><div style="color:rgba(255,255,255,.7);font-size:11px;">Student Dashboard</div></div>
     </div>
-    <button class="bo" onclick="doLogout()">Logout</button>
+    <div style="display:flex;align-items:center;gap:10px;">${clockChip()}<button class="bo" onclick="doLogout()">Logout</button></div>
   </div>
   <div style="max-width:1100px;margin:0 auto;padding:24px 20px;" class="fade-up">
     <div style="margin-bottom:22px;">
@@ -314,6 +322,44 @@ function dashH(){
         </div>
       </div>
     </div>
+
+    <!-- ══ ALL EXAMS TIMETABLE ══ -->
+    <div class="gw" style="padding:0;overflow:hidden;margin-top:20px;">
+      <div style="padding:16px 22px;border-bottom:2px solid #f0f4ff;display:flex;align-items:center;justify-content:space-between;">
+        <div><div style="color:#1e293b;font-size:16px;font-weight:800;">📅 Exam Timetable</div><div style="color:#94a3b8;font-size:12px;">आपके सभी Scheduled Exams</div></div>
+        <div style="background:linear-gradient(135deg,#667eea,#764ba2);border-radius:10px;padding:4px 12px;color:#fff;font-size:12px;font-weight:700;">${S.allExams.length} Exams</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl">
+          <thead><tr>${["#","Subject","Exam Code","Type","Date","Start","End","Marks","Status"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${S.eStatus==="loading"?`<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:40px;">Loading timetable…</td></tr>`:
+            S.allExams.length===0?`<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:40px;">📅 कोई Exam Schedule नहीं है</td></tr>`:
+            S.allExams.map((ex,i)=>{
+              const ts=tod();
+              const isToday=String(ex.date).slice(0,10)===ts;
+              const isPast=ex.date&&String(ex.date).slice(0,10)<ts;
+              const statusClr=isToday?"#10b981":isPast?"#94a3b8":"#667eea";
+              const statusBg=isToday?"#f0fdf4":isPast?"#f8f9ff":"#eff6ff";
+              const statusTxt=isToday?"🟢 Today":isPast?"✅ Past":"📅 Upcoming";
+              const rowBg=isToday?"background:#f0fdf4;":"";
+              return `<tr style="${rowBg}">
+                <td style="color:#94a3b8;font-weight:600;">${i+1}</td>
+                <td style="font-weight:700;color:#1e293b;">${esc(ex.subject)}</td>
+                <td style="color:#667eea;font-weight:600;">${esc(ex.examCode)}</td>
+                <td style="color:#64748b;">${esc(ex.examType||"—")}</td>
+                <td style="font-weight:700;color:${isToday?"#16a34a":"#1e293b"};">${ex.date?new Date(ex.date).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"—"}</td>
+                <td style="color:#10b981;font-weight:600;">${esc(ex.startTime||"—")}</td>
+                <td style="color:#64748b;">${esc(ex.endTime||"—")}</td>
+                <td style="font-weight:700;">${esc(ex.totalMarks||"—")}</td>
+                <td><span style="background:${statusBg};color:${statusClr};border:1px solid ${statusClr}44;border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;">${statusTxt}</span></td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>`;}
 
@@ -321,7 +367,7 @@ function doLogout(){
   clearIvs();
   if(S.stream)S.stream.getTracks().forEach(t=>t.stop());
   if(S.camS)S.camS.getTracks().forEach(t=>t.stop());
-  S={scr:"login",student:null,exam:null,questions:[],cur:0,seen:new Set(),marked:new Set(),tLeft:0,wCnt:0,warnings:[],viols:[],pdfDone:false,pdfLink:"",submitting:false,submitted:false,eStatus:"loading",eLoading:false,eMsg:"",photos:[],attData:[],attLoad:true,attQ:"",tIv:null,aIv:null,fIv:null,stream:null,camS:null,adminTab:"attendance",examList:[],examListLoad:false,ttCode:"",ttRow:0,ttDate:"",ttStart:"",ttEnd:"",ttMsg:"",ttSaving:false,ttLoading:false,ttLoaded:false,qCode:"",qRow:0,qYear:0,qCourse:"",setupQs:[],qMsg:"",qSaving:false,qLoading:false,qLoaded:false,setupCode:"",setupRow:0,setupDate:"",setupStart:"",setupEnd:"",setupMsg:"",setupSaving:false,setupLoading:false,setupLoaded:false};
+  S={scr:"login",student:null,exam:null,questions:[],cur:0,seen:new Set(),marked:new Set(),tLeft:0,wCnt:0,warnings:[],viols:[],pdfDone:false,pdfLink:"",submitting:false,submitted:false,eStatus:"loading",eLoading:false,eMsg:"",photos:[],allExams:[],attData:[],attLoad:true,attQ:"",tIv:null,aIv:null,fIv:null,stream:null,camS:null,adminTab:"attendance",examList:[],examListLoad:false,ttCode:"",ttRow:0,ttDate:"",ttStart:"",ttEnd:"",ttMsg:"",ttSaving:false,ttLoading:false,ttLoaded:false,qCode:"",qRow:0,qYear:0,qCourse:"",setupQs:[],qMsg:"",qSaving:false,qLoading:false,qLoaded:false,setupCode:"",setupRow:0,setupDate:"",setupStart:"",setupEnd:"",setupMsg:"",setupSaving:false,setupLoading:false,setupLoaded:false};
   R();
 }
 
@@ -583,7 +629,7 @@ function pdfH(){
   const pn=`${S.student?.rollNo||"ROLL"}_${(S.student?.name||"NAME").replace(/\s+/g,"_")}_${S.exam?.examCode||"EXAM"}_${dstr()}.pdf`;
   return`
 <div style="min-height:100vh;">
-  <div class="hdr"><div style="display:flex;align-items:center;gap:10px;"><div class="ic" style="width:38px;height:38px;">📄</div><div><div style="color:#fff;font-size:15px;font-weight:700;">PDF Upload</div><div style="color:rgba(255,255,255,.7);font-size:11px;">${esc(S.exam?.subject||"")}</div></div></div></div>
+  <div class="hdr"><div style="display:flex;align-items:center;gap:10px;"><div class="ic" style="width:38px;height:38px;">📄</div><div><div style="color:#fff;font-size:15px;font-weight:700;">PDF Upload</div><div style="color:rgba(255,255,255,.7);font-size:11px;">${esc(S.exam?.subject||"")}</div></div></div>${clockChip()}</div>
   <div style="max-width:700px;margin:0 auto;padding:24px 20px;" class="fade-up">
     <div style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(5,150,105,.2));border:2px solid rgba(16,185,129,.4);border-radius:20px;padding:20px;margin-bottom:24px;text-align:center;">
       <div style="font-size:40px;margin-bottom:8px;">🎉</div>
@@ -815,10 +861,12 @@ function ttLoad(code){
   if(!ex){S.ttMsg="❌ Exam not found in list";R();return;}
   S.ttCode=code;
   S.ttRow=ex.rowIndex;
-  S.ttDate=ex.date||"";
-  S.ttStart=ex.startTime||"";
-  S.ttEnd=ex.endTime||"";
-  S.ttMsg=""; // clear any old error
+  // Pre-fill from sheet — if blank, suggest today's date & common times
+  S.ttDate=ex.date||tod();
+  S.ttStart=ex.startTime||"08:00";
+  S.ttEnd=ex.endTime||"10:00";
+  // Show info if data already exists in sheet
+  S.ttMsg=ex.date?`ℹ️ पहले से set: ${ex.date} | ${ex.startTime||"?"} — ${ex.endTime||"?"}  (नीचे update कर सकते हैं)`:"";
   S.ttLoaded=true;
   R();
 }
@@ -950,7 +998,7 @@ function adminH(){
       <div class="ic" style="width:38px;height:38px;">🛡️</div>
       <div><div style="color:#fff;font-size:15px;font-weight:700;">Admin Panel</div><div style="color:rgba(255,255,255,.7);font-size:11px;">Career EduHub</div></div>
     </div>
-    <button class="bo" onclick="S.scr='adminLogin';R();">Logout</button>
+    <div style="display:flex;align-items:center;gap:10px;">${clockChip()}<button class="bo" onclick="S.scr='adminLogin';R();">Logout</button></div>
   </div>
 
   <div style="max-width:1200px;margin:0 auto;padding:24px 20px;" class="fade-up">
@@ -1017,7 +1065,7 @@ function adminH(){
       </div>
 
       ${S.ttLoading?`<div style="text-align:center;padding:30px;"><div class="lr" style="margin:0 auto 12px;"></div><div style="color:#94a3b8;">Loading…</div></div>`:""}
-      ${(S.ttMsg&&(!S.ttLoaded||S.ttMsg.startsWith("✅")||S.ttMsg.startsWith("⚠️")))?`<div style="margin-bottom:16px;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;background:${S.ttMsg.startsWith("✅")?"#f0fdf4":S.ttMsg.startsWith("⚠️")?"#fffbeb":"#fef3f2"};color:${S.ttMsg.startsWith("✅")?"#16a34a":S.ttMsg.startsWith("⚠️")?"#92400e":"#dc2626"};border:2px solid ${S.ttMsg.startsWith("✅")?"#bbf7d0":S.ttMsg.startsWith("⚠️")?"#fde68a":"#fecaca"};">${esc(S.ttMsg)}</div>`:""}
+      ${S.ttMsg?`<div style="margin-bottom:16px;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;background:${S.ttMsg.startsWith("✅")?"#f0fdf4":S.ttMsg.startsWith("⚠️")?"#fffbeb":S.ttMsg.startsWith("ℹ️")?"#eff6ff":"#fef3f2"};color:${S.ttMsg.startsWith("✅")?"#16a34a":S.ttMsg.startsWith("⚠️")?"#92400e":S.ttMsg.startsWith("ℹ️")?"#1d4ed8":"#dc2626"};border:2px solid ${S.ttMsg.startsWith("✅")?"#bbf7d0":S.ttMsg.startsWith("⚠️")?"#fde68a":S.ttMsg.startsWith("ℹ️")?"#bfdbfe":"#fecaca"};">${esc(S.ttMsg)}</div>`:""}
 
       ${S.ttLoaded?`
       <div style="background:linear-gradient(135deg,#f0f4ff,#e8edff);border:2px solid rgba(102,126,234,.2);border-radius:14px;padding:14px 18px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
@@ -1107,6 +1155,8 @@ function bindEv(){
   ["eu","ep"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});});
   ["au","ap"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter")doAdminL();});});
   if(S.scr==="exam"&&S.stream)setTimeout(()=>{const v=document.getElementById("vdo");if(v)v.srcObject=S.stream;},60);
+  // Start clock after each render (restarts ticker with fresh element reference)
+  if(["dashboard","admin","pdfUpload","exam"].includes(S.scr))startClock();
 }
 // Auto-refresh removed — use manual refresh button
 R();
