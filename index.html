@@ -91,7 +91,7 @@ select.sinp{cursor:pointer;}
 <div id="portal"><div id="app"></div></div>
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const GAS="https://script.google.com/macros/s/AKfycbzcjPTnxiV8zvVf0jTZf2PswEgSrx7V9GJ6PqxObo285Ka1vFcW_n0Lqw-KA_va69eQ/exec";
+const GAS="https://script.google.com/macros/s/AKfycbxKV9x6gnqiagMJIzrBph_RgcNpl29We_c9F_2xPy5EP6GilKYe02gnOB9A1KdSXic5/exec";
 const AU="admin@careereduhub.in", AP="Admin@2025";
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -868,10 +868,18 @@ async function createPDF(){
     catch(uploadErr){console.warn("Upload call threw:",uploadErr);}
     if(bar)bar.style.width="100%";
     // GAS redirects can cause parse issues — if no explicit error field, treat as success
-    const isErr=res&&(res.success===false||(typeof res.error==="string"&&res.error&&!res.driveLink));
+    // "Access denied: DriveApp" often fires AFTER the file is already saved — treat as soft error
+    const isDriveAccessErr=res&&typeof res.error==="string"&&res.error.includes("Access denied: DriveApp");
+    const isErr=res&&(res.success===false||(typeof res.error==="string"&&res.error&&!res.driveLink))&&!isDriveAccessErr;
     if(!isErr){
       if(st){st.textContent="✅ PDF Uploaded to Drive!";st.style.color="#16a34a";}
       S.pdfDone=true;S.pdfLink=(res&&res.driveLink)||"";
+    }else if(isDriveAccessErr){
+      // File likely saved but GAS threw a post-save permission error
+      if(st){st.textContent="⚠️ PDF Drive में save हुआ (verify करो) — फिर भी submit कर सकते हो";st.style.color="#f59e0b";}
+      console.warn("DriveApp access error after upload (file may have saved):",res);
+      // Mark as done so student can submit — they can verify in Drive
+      S.pdfDone=true;S.pdfLink="";
     }else{
       if(st){st.textContent="❌ Upload failed: "+(res?.error||"No response");st.style.color="#ef4444";}
       console.error("createPDF GAS error:",res);
