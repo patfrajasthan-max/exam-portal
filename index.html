@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Exam Portal</title>
+<!-- jsPDF for proper PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;}
@@ -781,7 +783,7 @@ async function createPDF(){
       if(st)st.textContent=`Page ${i+1}/${S.photos.length} process हो रही है…`;
     }
     if(st)st.textContent="PDF बन रही है…";if(bar)bar.style.width="60%";
-    const pdfB64=buildPDF(pages);
+    const pdfB64=await buildPDF(pages);
     if(st)st.textContent="Drive में upload हो रहा है…";if(bar)bar.style.width="75%";
     const res=await ap({action:"uploadPDF",fileName:pn,fileData:pdfB64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});
     if(bar)bar.style.width="100%";
@@ -806,72 +808,23 @@ async function createPDF(){
 
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
 
-// ── BUILD PDF — each JPEG embedded as ASCIIHexDecode (safe, no binary mixing) ──
-function buildPDF(jpegs){
-  // Each JPEG stored as hex string — avoids binary corruption in string ops
-  const hexImgs=jpegs.map(b64=>{
-    const bin=atob(b64);
-    let hex="";
-    for(let i=0;i<bin.length;i++)hex+=bin.charCodeAt(i).toString(16).padStart(2,"0");
-    return hex+">";  // ">" = ASCIIHexDecode EOD marker
+// ── BUILD PDF using jsPDF — proper JPEG embedding ──
+async function buildPDF(jpegs){
+  return new Promise((resolve,reject)=>{
+    try{
+      // jsPDF: A4 portrait, mm units
+      const {jsPDF}=window.jspdf;
+      const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+      const W=210,H=297; // A4 mm
+      jpegs.forEach((b64,i)=>{
+        if(i>0)doc.addPage();
+        doc.addImage("data:image/jpeg;base64,"+b64,"JPEG",0,0,W,H,undefined,"FAST");
+      });
+      // Return base64 string (without data URI prefix)
+      const b64pdf=doc.output("datauristring").split(",")[1];
+      resolve(b64pdf);
+    }catch(e){reject(e);}
   });
-
-  // Build PDF as array of text chunks (no binary mixing)
-  const parts=[];
-  const offsets={};
-  let objNum=0;
-  const imgObjNs=[],pageObjNs=[];
-
-  function addObj(content){
-    objNum++;
-    offsets[objNum]=parts.reduce((s,p)=>s+p.length,0);
-    parts.push(content);
-    return objNum;
-  }
-
-  // Image XObjects (hex-encoded JPEGs)
-  hexImgs.forEach((hex,i)=>{
-    const n=addObj(
-      `${objNum+1} 0 obj\n` +
-      `<< /Type /XObject /Subtype /Image /Width 1240 /Height 1754` +
-      ` /ColorSpace /DeviceRGB /BitsPerComponent 8` +
-      ` /Filter [/DCTDecode /ASCIIHexDecode] /Length ${hex.length} >>\n` +
-      `stream\n${hex}\nendstream\nendobj\n`
-    );
-    imgObjNs.push(n);
-  });
-
-  // Content streams + Page objects
-  hexImgs.forEach((_,i)=>{
-    const cs=`q 595 0 0 842 0 0 cm /Im${i} Do Q`;
-    const cn=addObj(`${objNum+1} 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`);
-    const pn=addObj(`${objNum+1} 0 obj\n<< /Type /Page /MediaBox [0 0 595 842] /Contents ${cn} 0 R /Resources << /XObject << /Im${i} ${imgObjNs[i]} 0 R >> >> >>\nendobj\n`);
-    pageObjNs.push(pn);
-  });
-
-  // Pages dict
-  const pgsN=addObj(`${objNum+1} 0 obj\n<< /Type /Pages /Kids [${pageObjNs.map(n=>n+" 0 R").join(" ")}] /Count ${pageObjNs.length} >>\nendobj\n`);
-  // Catalog
-  const catN=addObj(`${objNum+1} 0 obj\n<< /Type /Catalog /Pages ${pgsN} 0 R >>\nendobj\n`);
-
-  // xref
-  const body=parts.join("");
-  const xp=body.length;
-  let xref=`xref\n0 ${objNum+1}\n0000000000 65535 f \n`;
-  for(let i=1;i<=objNum;i++)xref+=String(offsets[i]||0).padStart(10,"0")+" 00000 n \n";
-  xref+=`trailer\n<< /Size ${objNum+1} /Root ${catN} 0 R >>\nstartxref\n${xp}\n%%EOF`;
-
-  // Safe base64 encode (no binary string issues)
-  const full=body+xref;
-  const u8=new Uint8Array(full.length);
-  for(let i=0;i<full.length;i++)u8[i]=full.charCodeAt(i)&0xff;
-  // Use FileReader for large files to avoid btoa stack overflow
-  let b64="";
-  const chunk=8192;
-  for(let i=0;i<u8.length;i+=chunk){
-    b64+=String.fromCharCode(...u8.subarray(i,i+chunk));
-  }
-  return btoa(b64);
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────
