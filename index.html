@@ -499,7 +499,7 @@ function examH(){
     <div class="em">
       <div style="background:linear-gradient(135deg,#fffbeb,#fef9c3);border:2px solid #fde68a;border-radius:16px;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;">
         <span style="font-size:18px;flex-shrink:0;">📋</span>
-        <div style="color:#78350f;font-size:12px;line-height:1.7;"><b>Instructions:</b> सभी questions ध्यान से पढ़ो → White paper पर answers लिखो (Q.No जरूर लिखो) → सबकी <b>एक PDF बनाओ</b> → Last question पर "Complete Exam" click करो → PDF upload करो → Submit.</div>
+        <div style="color:#78350f;font-size:12px;line-height:1.7;"><b>Instructions:</b> सभी questions ध्यान से पढ़ो → White paper पर answers लिखो (Q.No जरूर लिखो) → Last question पर "Complete Exam" click करो → Camera से <b>हर page की photo</b> लो → Submit करो।</div>
       </div>
       <div style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#64748b;font-size:13px;font-weight:600;">Q ${S.cur+1} of ${tot}</span><span style="color:#64748b;font-size:13px;">${S.seen.size} viewed</span></div>
@@ -652,7 +652,7 @@ function pdfH(){
     </div>
     <div class="gw" style="padding:24px;margin-bottom:20px;">
       <div style="color:#1e293b;font-size:16px;font-weight:800;margin-bottom:16px;">📋 Steps</div>
-      ${[["1️⃣","Paper check करो","सभी Q.No के answers लिखे हैं?"],["2️⃣","Camera खोलो","नीचे button click करो"],["3️⃣","Photos लो","हर page की clear photo (क्रम में)"],["4️⃣","PDF Create करो","Photos → Auto PDF बनेगा"],["5️⃣","Upload & Submit","PDF Drive में जाएगा → Submit करो"]].map(([n,t,d])=>`<div style="display:flex;gap:12px;margin-bottom:10px;padding:10px;background:#f8f9ff;border-radius:12px;border:1px solid #e8edff;"><span style="font-size:16px;flex-shrink:0;">${n}</span><div><div style="color:#1e293b;font-size:13px;font-weight:700;">${t}</div><div style="color:#64748b;font-size:12px;">${d}</div></div></div>`).join("")}
+      ${[["1️⃣","Paper check करो","सभी Q.No के answers लिखे हैं?"],["2️⃣","Camera खोलो","नीचे Camera button click करो"],["3️⃣","Auto-Crop ON करो","✂️ Crop बटन — page border auto crop होगा"],["4️⃣","हर page की photo लो","⏱ Auto button से 3-sec timer capture भी"],["5️⃣","Upload & Submit","Photos → Auto PDF बनेगा → Drive में जाएगा"]].map(([n,t,d])=>`<div style="display:flex;gap:12px;margin-bottom:10px;padding:10px;background:#f8f9ff;border-radius:12px;border:1px solid #e8edff;"><span style="font-size:16px;flex-shrink:0;">${n}</span><div><div style="color:#1e293b;font-size:13px;font-weight:700;">${t}</div><div style="color:#64748b;font-size:12px;">${d}</div></div></div>`).join("")}
       <div style="background:#f0f4ff;border:2px solid rgba(102,126,234,.2);border-radius:11px;padding:11px 14px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <div><div style="color:#94a3b8;font-size:11px;font-weight:600;margin-bottom:2px;">PDF File Name:</div><div style="color:#667eea;font-family:monospace;font-size:12px;font-weight:700;">${pn}</div></div>
         <button onclick="navigator.clipboard?.writeText('${pn}')" style="background:#667eea;border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">📋 Copy</button>
@@ -663,17 +663,27 @@ function pdfH(){
       <div style="color:#1e293b;font-size:16px;font-weight:800;margin-bottom:14px;">📸 Photos (${S.photos.length})</div>
       <div id="camwrap" style="display:none;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px;position:relative;">
         <video id="camprev" autoplay playsinline style="width:100%;max-height:400px;object-fit:contain;"></video>
-        <div style="position:absolute;bottom:14px;left:0;right:0;display:flex;justify-content:center;gap:14px;">
-          <button onclick="capPhoto()" style="background:rgba(255,255,255,.95);border:none;border-radius:50%;width:64px;height:64px;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);">📷</button>
-          <button onclick="closeCamera()" style="background:rgba(239,68,68,.85);border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);align-self:center;">✕</button>
+        <!-- Document crop overlay -->
+        <canvas id="cropOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:0.55;"></canvas>
+        <!-- Auto-capture countdown ring -->
+        <div id="acRing" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;">
+          <svg viewBox="0 0 80 80" style="width:80px;height:80px;transform:rotate(-90deg)"><circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="6"/><circle id="acArc" cx="40" cy="40" r="34" fill="none" stroke="#4facfe" stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke-linecap="round"/></svg>
+          <div id="acNum" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;font-weight:900;"></div>
         </div>
+        <div style="position:absolute;bottom:14px;left:0;right:0;display:flex;justify-content:center;gap:10px;align-items:center;">
+          <button onclick="toggleAutoCap()" id="acBtn" style="background:rgba(79,172,254,.9);border:none;border-radius:28px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);">⏱ Auto</button>
+          <button onclick="capPhoto()" style="background:rgba(255,255,255,.95);border:none;border-radius:50%;width:64px;height:64px;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);">📷</button>
+          <button onclick="toggleAutoCrop()" id="cropBtn" style="background:rgba(16,185,129,.85);border:none;border-radius:28px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);">✂️ Crop</button>
+          <button onclick="closeCamera()" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:rgba(239,68,68,.85);border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);">✕</button>
+        </div>
+        <div id="camInfo" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 10px;color:#fff;font-size:11px;font-weight:600;">📸 Hold steady · Good light</div>
       </div>
       ${S.photos.length>0?`<div class="pg">${S.photos.map((ph,i)=>`<div class="pt"><img src="${ph}" alt="P${i+1}"/><button class="pd" onclick="delPh(${i})">✕</button><div style="position:absolute;bottom:4px;left:6px;background:rgba(0,0,0,.7);border-radius:4px;padding:1px 6px;color:#fff;font-size:10px;font-weight:700;">P${i+1}</div></div>`).join("")}</div>`:""}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
         <button onclick="openCam()" class="btn bp sm" style="width:100%;padding:12px;">📷 Camera खोलो</button>
-        <button onclick="document.getElementById('finp').click()" class="btn sm" style="width:100%;padding:12px;background:linear-gradient(135deg,#f0f4ff,#e8edff);color:#667eea;border:2px solid rgba(102,126,234,.3);font-weight:700;cursor:pointer;">📁 Device से File</button>
+        <button onclick="document.getElementById('finp').click()" class="btn sm" style="width:100%;padding:12px;background:linear-gradient(135deg,#f0f4ff,#e8edff);color:#667eea;border:2px solid rgba(102,126,234,.3);font-weight:700;cursor:pointer;">🖼️ Gallery से चुनो</button>
       </div>
-      <input type="file" id="finp" accept="image/*,.pdf" multiple style="display:none;" onchange="handleFiles(this)"/>
+      <input type="file" id="finp" accept="image/*" capture="environment" multiple style="display:none;" onchange="handleFiles(this)"/>
     </div>
 
     ${S.photos.length>0||S.pdfDone?`
@@ -712,52 +722,110 @@ async function openCam(){
     try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});}
     catch{s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
     S.camS=s;vid.srcObject=s;wrap.style.display="block";
-  }catch{alert("Camera नहीं खुला। Device से file select करो।");}
+    startCropGuide();
+  }catch{alert("Camera नहीं खुला। Gallery से image select करो।");}
 }
-function closeCamera(){if(S.camS){S.camS.getTracks().forEach(t=>t.stop());S.camS=null;}const w=document.getElementById("camwrap");if(w)w.style.display="none";}
+function closeCamera(){clearAutoCap();clearInterval(_cropGuideIv);if(S.camS){S.camS.getTracks().forEach(t=>t.stop());S.camS=null;}const w=document.getElementById("camwrap");if(w)w.style.display="none";}
+
+// ── AUTO-CAPTURE & AUTO-CROP STATE ───────────────────────────
+let _acTimer=null, _acSecs=0, _autoCropOn=false;
+
+function toggleAutoCap(){
+  if(_acTimer){clearAutoCap();return;}
+  _acSecs=3;
+  const btn=document.getElementById("acBtn");
+  if(btn){btn.textContent="⏹ Stop";btn.style.background="rgba(239,68,68,.9)";}
+  const ring=document.getElementById("acRing");if(ring)ring.style.display="block";
+  runAcTick();
+}
+function runAcTick(){
+  const arc=document.getElementById("acArc"),num=document.getElementById("acNum");
+  const total=3,circ=213.6;
+  if(arc)arc.style.strokeDashoffset=circ*(1-(_acSecs/total));
+  if(num)num.textContent=_acSecs;
+  if(_acSecs<=0){capPhoto();clearAutoCap();return;}
+  _acSecs--;
+  _acTimer=setTimeout(runAcTick,1000);
+}
+function clearAutoCap(){
+  clearTimeout(_acTimer);_acTimer=null;_acSecs=0;
+  const btn=document.getElementById("acBtn");
+  if(btn){btn.textContent="⏱ Auto";btn.style.background="rgba(79,172,254,.9)";}
+  const ring=document.getElementById("acRing");if(ring)ring.style.display="none";
+}
+function toggleAutoCrop(){
+  _autoCropOn=!_autoCropOn;
+  const btn=document.getElementById("cropBtn");
+  if(btn){btn.style.background=_autoCropOn?"rgba(245,158,11,.9)":"rgba(16,185,129,.85)";btn.textContent=_autoCropOn?"✂️ Crop ON":"✂️ Crop";}
+  const ov=document.getElementById("cropOverlay");
+  if(!_autoCropOn&&ov){const ctx=ov.getContext("2d");ctx.clearRect(0,0,ov.width,ov.height);}
+}
+
+// Draw crop-guide overlay on camera frame
+function drawCropGuide(){
+  const vid=document.getElementById("camprev");
+  const ov=document.getElementById("cropOverlay");
+  if(!vid||!ov||!_autoCropOn)return;
+  ov.width=vid.videoWidth||vid.offsetWidth||400;
+  ov.height=vid.videoHeight||vid.offsetHeight||300;
+  const ctx=ov.getContext("2d");ctx.clearRect(0,0,ov.width,ov.height);
+  const W=ov.width,H=ov.height;
+  // A4-ish guide rectangle (80% width, centred)
+  const gw=W*.78,gh=gw*1.414,gx=(W-gw)/2,gy=(H-gh)/2>0?(H-gh)/2:4;
+  ctx.strokeStyle="#4facfe";ctx.lineWidth=3;ctx.setLineDash([12,6]);
+  ctx.strokeRect(gx,gy,gw,Math.min(gh,H-gy-4));
+  // Corner marks
+  const cs=20;ctx.setLineDash([]);ctx.strokeStyle="#00f2fe";ctx.lineWidth=4;
+  [[gx,gy],[gx+gw,gy],[gx,gy+Math.min(gh,H-gy-4)],[gx+gw,gy+Math.min(gh,H-gy-4)]].forEach(([cx,cy],idx)=>{
+    const sx=idx%2===0?1:-1,sy=idx<2?1:-1;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+sx*cs,cy);ctx.moveTo(cx,cy);ctx.lineTo(cx,cy+sy*cs);ctx.stroke();
+  });
+}
+let _cropGuideIv=null;
+function startCropGuide(){clearInterval(_cropGuideIv);_cropGuideIv=setInterval(()=>{if(_autoCropOn)drawCropGuide();},200);}
+
+// Auto-crop: crop to guide rectangle before saving
+function cropImageToGuide(vid){
+  const c=document.createElement("canvas");
+  const vw=vid.videoWidth||1280,vh=vid.videoHeight||720;
+  c.width=vw;c.height=vh;
+  const ctx=c.getContext("2d");ctx.drawImage(vid,0,0,vw,vh);
+  // Compute guide rect same as drawCropGuide
+  const gw=vw*.78,gh=gw*1.414,gx=(vw-gw)/2,gy=(vh-gh)/2>0?(vh-gh)/2:4;
+  const ch=Math.min(gh,vh-gy-4);
+  // Crop canvas
+  const c2=document.createElement("canvas");c2.width=Math.round(gw);c2.height=Math.round(ch);
+  const ctx2=c2.getContext("2d");ctx2.drawImage(c,gx,gy,gw,ch,0,0,gw,ch);
+  return c2;
+}
 
 function capPhoto(){
   const vid=document.getElementById("camprev");if(!vid)return;
-  const c=document.createElement("canvas");c.width=vid.videoWidth||1280;c.height=vid.videoHeight||720;
-  const ctx=c.getContext("2d");
-  ctx.drawImage(vid,0,0,c.width,c.height);
-  ctx.fillStyle="rgba(102,126,234,0.5)";ctx.font=`bold ${Math.max(16,c.width*.018)}px Arial`;
-  ctx.fillText(`${S.student?.rollNo||""} · ${S.student?.name||""} · ${S.exam?.examCode||""} · ${new Date().toLocaleDateString()}`,10,c.height-14);
-  S.photos.push(c.toDataURL("image/jpeg",.85));
+  let canvas;
+  if(_autoCropOn){
+    canvas=cropImageToGuide(vid);
+  }else{
+    canvas=document.createElement("canvas");
+    canvas.width=vid.videoWidth||1280;canvas.height=vid.videoHeight||720;
+    canvas.getContext("2d").drawImage(vid,0,0,canvas.width,canvas.height);
+  }
+  const ctx=canvas.getContext("2d");
+  ctx.fillStyle="rgba(102,126,234,0.5)";ctx.font=`bold ${Math.max(14,canvas.width*.018)}px Arial`;
+  ctx.fillText(`${S.student?.rollNo||""} · ${S.student?.name||""} · ${S.exam?.examCode||""} · ${new Date().toLocaleDateString()}`,8,canvas.height-10);
+  S.photos.push(canvas.toDataURL("image/jpeg",.88));
   const fl=document.createElement("div");fl.style.cssText="position:fixed;inset:0;background:#fff;z-index:9999;opacity:.8;pointer-events:none;";
   document.body.appendChild(fl);setTimeout(()=>fl.remove(),150);
+  // Auto-schedule next if auto-capture was running
+  clearAutoCap();
   R();
-  setTimeout(openCam,200);
+  setTimeout(()=>{openCam();if(_autoCropOn)toggleAutoCrop();if(_autoCropOn||true){}},250);
 }
 function delPh(i){S.photos.splice(i,1);R();}
 function handleFiles(inp){
   Array.from(inp.files||[]).forEach(f=>{
     if(f.type.startsWith("image/")){const r=new FileReader();r.onload=e=>{S.photos.push(e.target.result);R();};r.readAsDataURL(f);}
-    else if(f.type==="application/pdf"){upPDF(f);}
   });
-}
-async function upPDF(file){
-  const pn=`${S.student?.rollNo||"ROLL"}_${(S.student?.name||"NAME").replace(/\s+/g,"_")}_${S.exam?.examCode||"EXAM"}_${dstr()}.pdf`;
-  const prog=document.getElementById("pdfprog"),bar=document.getElementById("pdfbar"),st=document.getElementById("pdfst");
-  if(prog)prog.style.display="block";
-  if(st)st.textContent="File read हो रही है…";if(bar)bar.style.width="30%";
-  try{
-    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
-    if(st)st.textContent="Drive में upload हो रहा है…";if(bar)bar.style.width="60%";
-    const result=await ap({action:"uploadPDF",fileName:pn,fileData:b64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});
-    if(result&&result.success){
-      if(bar)bar.style.width="100%";if(st){st.textContent="✅ PDF Uploaded!";st.style.color="#16a34a";}
-      S.pdfDone=true;S.pdfLink=result.driveLink||"";
-    }else{
-      if(st){st.textContent="❌ Upload failed: "+(result?.error||"Unknown error");st.style.color="#ef4444";}
-      console.error("upPDF GAS error:",result);
-    }
-    setTimeout(()=>R(),1000);
-  }catch(e){
-    if(st){st.textContent="❌ Error: "+e.message;st.style.color="#ef4444";}
-    console.error("upPDF exception:",e);
-    setTimeout(()=>R(),2000);
-  }
+  inp.value="";
 }
 
 // ── CREATE PDF ────────────────────────────────────────────────
