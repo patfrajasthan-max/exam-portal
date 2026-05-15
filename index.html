@@ -89,7 +89,7 @@ select.sinp{cursor:pointer;}
 <div id="portal"><div id="app"></div></div>
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const GAS="https://script.google.com/macros/s/AKfycbx0dhA2_03WTh-4WppHvSRQPs7AFKFQvSiN--4tX9FjO0qC6EzCr4Cx4Us6phpxrylm/exec";
+const GAS="https://script.google.com/macros/s/AKfycbye7Khs9XCM0VuqMMHDX8TA3UoJX7pswjfCg83Q01BT_d4NNxFeFCjdK4NAtW9NC35V/exec";
 const AU="admin@careereduhub.in", AP="Admin@2025";
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -736,11 +736,26 @@ function handleFiles(inp){
 }
 async function upPDF(file){
   const pn=`${S.student?.rollNo||"ROLL"}_${(S.student?.name||"NAME").replace(/\s+/g,"_")}_${S.exam?.examCode||"EXAM"}_${dstr()}.pdf`;
+  const prog=document.getElementById("pdfprog"),bar=document.getElementById("pdfbar"),st=document.getElementById("pdfst");
+  if(prog)prog.style.display="block";
+  if(st)st.textContent="File read हो रही है…";if(bar)bar.style.width="30%";
   try{
     const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
+    if(st)st.textContent="Drive में upload हो रहा है…";if(bar)bar.style.width="60%";
     const result=await ap({action:"uploadPDF",fileName:pn,fileData:b64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});
-    S.pdfDone=true;S.pdfLink=result?.driveLink||"";R();
-  }catch{S.pdfDone=true;R();}
+    if(result&&result.success){
+      if(bar)bar.style.width="100%";if(st){st.textContent="✅ PDF Uploaded!";st.style.color="#16a34a";}
+      S.pdfDone=true;S.pdfLink=result.driveLink||"";
+    }else{
+      if(st){st.textContent="❌ Upload failed: "+(result?.error||"Unknown error");st.style.color="#ef4444";}
+      console.error("upPDF GAS error:",result);
+    }
+    setTimeout(()=>R(),1000);
+  }catch(e){
+    if(st){st.textContent="❌ Error: "+e.message;st.style.color="#ef4444";}
+    console.error("upPDF exception:",e);
+    setTimeout(()=>R(),2000);
+  }
 }
 
 // ── CREATE PDF ────────────────────────────────────────────────
@@ -769,44 +784,93 @@ async function createPDF(){
     const pdfB64=buildPDF(pages);
     if(st)st.textContent="Drive में upload हो रहा है…";if(bar)bar.style.width="75%";
     const res=await ap({action:"uploadPDF",fileName:pn,fileData:pdfB64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});
-    if(bar)bar.style.width="100%";if(st){st.textContent="✅ PDF Uploaded!";st.style.color="#16a34a";}
-    S.pdfDone=true;S.pdfLink=res?.driveLink||"";
-    setTimeout(()=>R(),800);
+    if(bar)bar.style.width="100%";
+    if(res&&res.success){
+      if(st){st.textContent="✅ PDF Uploaded to Drive!";st.style.color="#16a34a";}
+      S.pdfDone=true;S.pdfLink=res.driveLink||"";
+    }else{
+      if(st){st.textContent="❌ Upload failed: "+(res?.error||"No response from server");st.style.color="#ef4444";}
+      console.error("createPDF GAS error:",res);
+      // Still mark done so student can submit — but show error
+      S.pdfDone=false;
+    }
+    setTimeout(()=>R(),1000);
   }catch(e){
-    console.error(e);
-    if(bar)bar.style.width="100%";if(st){st.textContent="✅ PDF Ready";st.style.color="#16a34a";}
-    S.pdfDone=true;setTimeout(()=>R(),800);
+    console.error("createPDF exception:",e);
+    if(bar)bar.style.width="100%";
+    if(st){st.textContent="❌ Error: "+e.message;st.style.color="#ef4444";}
+    S.pdfDone=false;
+    setTimeout(()=>R(),2000);
   }
 }
 
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
 
+// ── BUILD PDF — each JPEG embedded as ASCIIHexDecode (safe, no binary mixing) ──
 function buildPDF(jpegs){
-  let body="%PDF-1.4\n";const offs={};let on=0;const objs=[];
-  const imgNs=[];
-  jpegs.forEach((j,i)=>{
-    const bytes=atob(j),len=bytes.length;on++;imgNs.push(on);
-    objs.push({n:on,c:`${on} 0 obj\n<< /Type /XObject /Subtype /Image /Width 1240 /Height 1754 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${len} >>\nstream\n${bytes}\nendstream\nendobj\n`});
+  // Each JPEG stored as hex string — avoids binary corruption in string ops
+  const hexImgs=jpegs.map(b64=>{
+    const bin=atob(b64);
+    let hex="";
+    for(let i=0;i<bin.length;i++)hex+=bin.charCodeAt(i).toString(16).padStart(2,"0");
+    return hex+">";  // ">" = ASCIIHexDecode EOD marker
   });
-  const pageNs=[];
-  jpegs.forEach((_,i)=>{
-    on++;const cn=on;const cs=`q 595 0 0 842 0 0 cm /Im${i} Do Q`;
-    objs.push({n:on,c:`${on} 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`});
-    on++;pageNs.push(on);
-    objs.push({n:on,c:`${on} 0 obj\n<< /Type /Page /MediaBox [0 0 595 842] /Contents ${cn} 0 R /Resources << /XObject << /Im${i} ${imgNs[i]} 0 R >> >> >>\nendobj\n`});
+
+  // Build PDF as array of text chunks (no binary mixing)
+  const parts=[];
+  const offsets={};
+  let objNum=0;
+  const imgObjNs=[],pageObjNs=[];
+
+  function addObj(content){
+    objNum++;
+    offsets[objNum]=parts.reduce((s,p)=>s+p.length,0);
+    parts.push(content);
+    return objNum;
+  }
+
+  // Image XObjects (hex-encoded JPEGs)
+  hexImgs.forEach((hex,i)=>{
+    const n=addObj(
+      `${objNum+1} 0 obj\n` +
+      `<< /Type /XObject /Subtype /Image /Width 1240 /Height 1754` +
+      ` /ColorSpace /DeviceRGB /BitsPerComponent 8` +
+      ` /Filter [/DCTDecode /ASCIIHexDecode] /Length ${hex.length} >>\n` +
+      `stream\n${hex}\nendstream\nendobj\n`
+    );
+    imgObjNs.push(n);
   });
-  on++;const pgsN=on;
-  objs.push({n:on,c:`${on} 0 obj\n<< /Type /Pages /Kids [${pageNs.map(n=>`${n} 0 R`).join(" ")}] /Count ${pageNs.length} >>\nendobj\n`});
-  on++;const catN=on;
-  objs.push({n:on,c:`${on} 0 obj\n<< /Type /Catalog /Pages ${pgsN} 0 R >>\nendobj\n`});
-  objs.forEach(o=>{offs[o.n]=body.length;body+=o.c;});
+
+  // Content streams + Page objects
+  hexImgs.forEach((_,i)=>{
+    const cs=`q 595 0 0 842 0 0 cm /Im${i} Do Q`;
+    const cn=addObj(`${objNum+1} 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`);
+    const pn=addObj(`${objNum+1} 0 obj\n<< /Type /Page /MediaBox [0 0 595 842] /Contents ${cn} 0 R /Resources << /XObject << /Im${i} ${imgObjNs[i]} 0 R >> >> >>\nendobj\n`);
+    pageObjNs.push(pn);
+  });
+
+  // Pages dict
+  const pgsN=addObj(`${objNum+1} 0 obj\n<< /Type /Pages /Kids [${pageObjNs.map(n=>n+" 0 R").join(" ")}] /Count ${pageObjNs.length} >>\nendobj\n`);
+  // Catalog
+  const catN=addObj(`${objNum+1} 0 obj\n<< /Type /Catalog /Pages ${pgsN} 0 R >>\nendobj\n`);
+
+  // xref
+  const body=parts.join("");
   const xp=body.length;
-  body+=`xref\n0 ${on+1}\n0000000000 65535 f \n`;
-  for(let i=1;i<=on;i++)body+=String(offs[i]||0).padStart(10,"0")+" 00000 n \n";
-  body+=`trailer\n<< /Size ${on+1} /Root ${catN} 0 R >>\nstartxref\n${xp}\n%%EOF`;
-  const bytes=new Uint8Array(body.length);
-  for(let i=0;i<body.length;i++)bytes[i]=body.charCodeAt(i)&0xff;
-  let b64="";bytes.forEach(b=>b64+=String.fromCharCode(b));
+  let xref=`xref\n0 ${objNum+1}\n0000000000 65535 f \n`;
+  for(let i=1;i<=objNum;i++)xref+=String(offsets[i]||0).padStart(10,"0")+" 00000 n \n";
+  xref+=`trailer\n<< /Size ${objNum+1} /Root ${catN} 0 R >>\nstartxref\n${xp}\n%%EOF`;
+
+  // Safe base64 encode (no binary string issues)
+  const full=body+xref;
+  const u8=new Uint8Array(full.length);
+  for(let i=0;i<full.length;i++)u8[i]=full.charCodeAt(i)&0xff;
+  // Use FileReader for large files to avoid btoa stack overflow
+  let b64="";
+  const chunk=8192;
+  for(let i=0;i<u8.length;i+=chunk){
+    b64+=String.fromCharCode(...u8.subarray(i,i+chunk));
+  }
   return btoa(b64);
 }
 
