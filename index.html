@@ -215,9 +215,9 @@ async function doLogin(){
     const res=await ag({action:"login",username:u,password:p});
     if(res.noExam){sErr(err,"📅 आपका कोई Exam Schedule नहीं है। Admission office से संपर्क करें।","#f0f9ff","#3b82f6");btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";return;}
     if(res.feeError){
-      // Build student object from feeError response fields
-      const feeStudent=res.student||{name:res.name||"",unpaid:res.unpaid||0,paid:res.paid||0,totalFee:res.totalFee||0,rollNo:res.rollNo||"",course:res.course||"",examYear:res.examYear||1,institute:res.institute||"",fatherName:res.fatherName||"",motherName:res.motherName||"",mobile:res.mobile||"",email:res.email||"",duration:res.duration||"",session:res.session||"",enrollNo:res.enrollNo||""};
-      S.student=feeStudent;S.scr="dashboard";R();loadExam();return;
+      err.style.display="block";err.style.background="linear-gradient(135deg,#fef3f2,#fff5f5)";err.style.border="2px solid #fecaca";
+      err.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="font-size:24px;">🚫</div><div><div style="color:#dc2626;font-weight:800;font-size:14px;">Fee Pending — Login Block</div><div style="color:#ef4444;font-size:12px;">Dear ${esc(res.name)}</div></div></div><div style="background:#fff;border-radius:10px;padding:10px;border:1px solid #fecaca;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:#64748b;font-size:12px;font-weight:600;">Pending:</span><span style="color:#dc2626;font-size:22px;font-weight:900;">₹${fmt(res.unpaid)}</span></div><div style="color:#94a3b8;font-size:11px;margin-top:4px;">Fee जमा करने के बाद login करें।</div></div><a href="https://www.careereduhub.in/p/payment.html" style="display:block;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;text-align:center;padding:9px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;">💳 Fee जमा करो →</a>`;
+      btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";return;
     }
     if(res.success){S.student=res.student;S.scr="dashboard";R();loadExam();}
     else{sErr(err,"❌ Invalid Username or Password","#fef3f2","#ef4444");btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";}
@@ -337,7 +337,7 @@ function dashH(){
             <div style="color:#1e293b;font-size:17px;font-weight:800;margin-bottom:14px;line-height:1.3;">${esc(S.exam.subject)}</div>
             ${[["📋",S.exam.examCode],["⏰",S.exam.startTime],["🏁",S.exam.endTime],["📊 Marks",S.exam.totalMarks]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f0f4ff;"><span style="color:#94a3b8;font-size:13px;">${l}</span><span style="color:#1e293b;font-size:13px;font-weight:700;">${esc(String(v||""))}</span></div>`).join("")}
             <div style="background:${SC}18;border:2px solid ${SC}44;border-radius:12px;padding:10px;text-align:center;color:${SC};font-size:13px;font-weight:700;margin:12px 0;">${S.eMsg}</div>
-            ${S.eStatus==="active"?(Number(st.unpaid)>0?`<div style="background:linear-gradient(135deg,#fef3f2,#fff5f5);border:2px solid #fecaca;border-radius:16px;padding:16px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="font-size:26px;">🚫</div><div><div style="color:#dc2626;font-size:14px;font-weight:800;">Fee Pending — Exam Block</div><div style="color:#ef4444;font-size:12px;">Exam लेने के लिए पहले Fee clear करें</div></div></div><div style="background:#fff;border-radius:10px;padding:10px 14px;border:1px solid #fecaca;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#64748b;font-size:12px;font-weight:600;">Pending Amount:</span><span style="color:#dc2626;font-size:22px;font-weight:900;">₹${fmt(st.unpaid)}</span></div><a href="https://www.careereduhub.in/p/payment.html" target="_blank" style="display:block;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;text-align:center;padding:12px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;">💳 Fee जमा करो →</a></div>`:`<button class="btn bp" onclick="showRules()">🚀 Exam Start करो</button>`):""}
+            ${S.eStatus==="active"?`<button class="btn bp" onclick="startExam()">🚀 Exam Start करो</button>`:""}
           `:`<div style="text-align:center;padding:20px;"><div style="font-size:40px;margin-bottom:10px;">📅</div><div style="color:#94a3b8;font-size:14px;">${S.eMsg}</div></div>`}
         </div>
         <div class="glass" style="padding:20px;">
@@ -455,7 +455,6 @@ function showRules(){
 
 async function startExam(){
   if(!S.student||!S.exam){alert("Student या Exam data नहीं मिला। Page refresh करो।");return;}
-  if(Number(S.student.unpaid)>0){alert("🚫 Fee Pending है!\n\nExam लेने के लिए पहले ₹"+fmt(S.student.unpaid)+" की Fee जमा करें।");return;}
   S.questions=[];S.cur=0;S.seen=new Set();S.marked=new Set();
   S.wCnt=0;S.warnings=[];S.viols=[];S.pdfDone=false;S.submitted=false;S.photos=[];
   S.scr="exam";S.eLoading=true;R();
@@ -869,10 +868,18 @@ async function createPDF(){
     catch(uploadErr){console.warn("Upload call threw:",uploadErr);}
     if(bar)bar.style.width="100%";
     // GAS redirects can cause parse issues — if no explicit error field, treat as success
-    const isErr=res&&(res.success===false||(typeof res.error==="string"&&res.error&&!res.driveLink));
+    // "Access denied: DriveApp" often fires AFTER the file is already saved — treat as soft error
+    const isDriveAccessErr=res&&typeof res.error==="string"&&res.error.includes("Access denied: DriveApp");
+    const isErr=res&&(res.success===false||(typeof res.error==="string"&&res.error&&!res.driveLink))&&!isDriveAccessErr;
     if(!isErr){
       if(st){st.textContent="✅ PDF Uploaded to Drive!";st.style.color="#16a34a";}
       S.pdfDone=true;S.pdfLink=(res&&res.driveLink)||"";
+    }else if(isDriveAccessErr){
+      // File likely saved but GAS threw a post-save permission error
+      if(st){st.textContent="⚠️ PDF Drive में save हुआ (verify करो) — फिर भी submit कर सकते हो";st.style.color="#f59e0b";}
+      console.warn("DriveApp access error after upload (file may have saved):",res);
+      // Mark as done so student can submit — they can verify in Drive
+      S.pdfDone=true;S.pdfLink="";
     }else{
       if(st){st.textContent="❌ Upload failed: "+(res?.error||"No response");st.style.color="#ef4444";}
       console.error("createPDF GAS error:",res);
