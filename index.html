@@ -214,7 +214,12 @@ async function doLogin(){
   try{
     const res=await ag({action:"login",username:u,password:p});
     if(res.noExam){sErr(err,"📅 आपका कोई Exam Schedule नहीं है। Admission office से संपर्क करें।","#f0f9ff","#3b82f6");btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";return;}
-    if(res.feeError||res.success){S.student=res.student;S.scr="dashboard";R();loadExam();return;}
+    if(res.feeError){
+      // Build student object from feeError response fields
+      const feeStudent=res.student||{name:res.name||"",unpaid:res.unpaid||0,paid:res.paid||0,totalFee:res.totalFee||0,rollNo:res.rollNo||"",course:res.course||"",examYear:res.examYear||1,institute:res.institute||"",fatherName:res.fatherName||"",motherName:res.motherName||"",mobile:res.mobile||"",email:res.email||"",duration:res.duration||"",session:res.session||"",enrollNo:res.enrollNo||""};
+      S.student=feeStudent;S.scr="dashboard";R();loadExam();return;
+    }
+    if(res.success){S.student=res.student;S.scr="dashboard";R();loadExam();}
     else{sErr(err,"❌ Invalid Username or Password","#fef3f2","#ef4444");btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";}
   }catch(e){sErr(err,"⚡ Connection error. दोबारा try करो.","#fffbeb","#d97706");btn.disabled=false;btn.textContent="🔐 Login to Exam Portal";}
 }
@@ -450,7 +455,7 @@ function showRules(){
 
 async function startExam(){
   if(!S.student||!S.exam){alert("Student या Exam data नहीं मिला। Page refresh करो।");return;}
-  if(Number(S.student.unpaid)>0){alert("🚫 Fee Pending है!\n\nExam लेने के लिए पहले ₹"+fmt(S.student.unpaid)+" की Fee जमा करें।\n\ncareereduhub.in पर जाकर payment करें।");return;}
+  if(Number(S.student.unpaid)>0){alert("🚫 Fee Pending है!\n\nExam लेने के लिए पहले ₹"+fmt(S.student.unpaid)+" की Fee जमा करें।");return;}
   S.questions=[];S.cur=0;S.seen=new Set();S.marked=new Set();
   S.wCnt=0;S.warnings=[];S.viols=[];S.pdfDone=false;S.submitted=false;S.photos=[];
   S.scr="exam";S.eLoading=true;R();
