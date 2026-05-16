@@ -365,7 +365,7 @@ function dashH(){
                   <span style="color:#1e293b;font-size:11px;font-weight:700;">📊 ${esc(String(ex.totalMarks||""))} Marks</span>
                 </div>
                 <div style="color:${stClr};font-size:11px;font-weight:600;margin-bottom:${isActive?8:0}px;">${esc(ex._msg||"")}</div>
-                ${isActive?`<button class="btn bp" style="padding:9px 16px;font-size:13px;border-radius:12px;" onclick="startExamByCode('${esc(ex.examCode)}')">🚀 Start Exam</button>`:""}
+                ${isActive?`<button class="btn bp" style="padding:9px 16px;font-size:13px;border-radius:12px;" onclick="startExamByCode(this.dataset.code)" data-code="${esc(ex.examCode)}">🚀 Start Exam</button>`:""}
               </div>`;
             }).join("")
           :`<div style="text-align:center;padding:20px;"><div style="font-size:40px;margin-bottom:10px;">📅</div><div style="color:#94a3b8;font-size:14px;">${S.eMsg}</div></div>`}
@@ -484,10 +484,12 @@ function showRules(){
 }
 
 // startExamByCode: called from Today's Exams card with specific exam code
-function startExamByCode(examCode){
-  const ex=S.todaysExams&&S.todaysExams.find(e=>e.examCode===examCode);
-  if(ex){S.exam=ex;}else{alert("Exam data नहीं मिला");return;}
-  showRules();
+function startExamByCode(el){
+  // el can be a DOM element (when called via this.dataset.code) or a string code
+  const examCode=typeof el==="string"?el:(el&&el.dataset?el.dataset.code:el);
+  const ex=S.todaysExams&&S.todaysExams.find(e=>String(e.examCode)===String(examCode));
+  if(ex){S.exam=ex;showRules();}
+  else{alert("Exam data नहीं मिला — Page refresh करो।");}
 }
 
 async function startExam(){
