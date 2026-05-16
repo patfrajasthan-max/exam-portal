@@ -427,10 +427,12 @@ function doLogout(){
 
 // ── RULES POPUP ───────────────────────────────────────────────
 function showRules(){
+  // Remove any existing popup first
+  var existing=document.getElementById("rov");if(existing)existing.remove();
   var ov=document.createElement("div");
   ov.id="rov";
   ov.style.position="fixed";ov.style.inset="0";ov.style.background="rgba(0,0,0,0.7)";
-  ov.style.zIndex="10000";ov.style.display="flex";ov.style.alignItems="center";
+  ov.style.zIndex="99999999";ov.style.display="flex";ov.style.alignItems="center";
   ov.style.justifyContent="center";ov.style.padding="20px";ov.style.backdropFilter="blur(8px)";
 
   var rules=[
@@ -480,16 +482,18 @@ function showRules(){
 
   box.appendChild(btns);
   ov.appendChild(box);
-  document.body.appendChild(ov);
+  (document.getElementById("portal")||document.body).appendChild(ov);
 }
 
 // startExamByCode: called from Today's Exams card with specific exam code
 function startExamByCode(el){
-  // el can be a DOM element (when called via this.dataset.code) or a string code
-  const examCode=typeof el==="string"?el:(el&&el.dataset?el.dataset.code:el);
-  const ex=S.todaysExams&&S.todaysExams.find(e=>String(e.examCode)===String(examCode));
-  if(ex){S.exam=ex;showRules();}
-  else{alert("Exam data नहीं मिला — Page refresh करो।");}
+  try{
+    const examCode=typeof el==="string"?el:(el&&el.dataset?el.dataset.code:String(el));
+    const list=S.todaysExams||[];
+    const ex=list.find(e=>String(e.examCode).trim()===String(examCode).trim());
+    if(ex){S.exam=ex;showRules();}
+    else{alert("Exam data नहीं मिला। आजके exams: "+list.map(e=>e.examCode).join(", ")+"  | तलाश: "+examCode);}
+  }catch(err){alert("Error: "+err.message);}
 }
 
 async function startExam(){
