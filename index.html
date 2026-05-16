@@ -102,6 +102,7 @@ let S={
   pdfDone:false, pdfLink:"", submitting:false, submitted:false,
   eStatus:"loading", eMsg:"", photos:[],
   allExams:[], // all exams for this student (for timetable view)
+  todaysExams:[], // all today's exams with per-exam status
   attData:[], attLoad:true, attQ:"",
   tIv:null, aIv:null, fIv:null, stream:null, camS:null,
   // Admin tabs: attendance | timetable | questions
@@ -273,15 +274,26 @@ async function loadExam(){
     // Sort by date
     S.allExams=filtered.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     const now=new Date(),ts=tod();
-    const e=filtered.find(x=>String(x.date).slice(0,10)===ts);
-    if(!e){S.eStatus="none";S.eMsg="📅 आज कोई Exam Schedule नहीं है";S.exam=null;}
-    else{
-      const s2=pt(e.startTime),en=pt(e.endTime);S.exam=e;
+    const todayList=filtered.filter(x=>String(x.date).slice(0,10)===ts)
+      .sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));
+    S.todaysExams=todayList.map(e=>{
+      const s2=pt(e.startTime),en=pt(e.endTime);
       const early=new Date(s2.getTime()-10*60000);
-      if(now<early){S.eStatus="upcoming";S.eMsg=`⏰ Exam ${ft(s2)} पर शुरू होगा`;}
-      else if(now>=early&&now<s2){S.eStatus="active";S.eMsg=`🟡 Exam ${ft(s2)} पर शुरू — Join करो!`;}
-      else if(now>=s2&&now<=en){S.eStatus="active";S.eMsg="✅ Exam LIVE — Start करो!";}
-      else{S.eStatus="closed";S.eMsg="🔒 Exam बंद हो गया";}
+      let status,msg;
+      if(now<early){status="upcoming";msg=`⏰ ${ft(s2)} पर शुरू होगा`;}
+      else if(now>=early&&now<s2){status="active";msg=`🟡 ${ft(s2)} पर शुरू — Join करो!`;}
+      else if(now>=s2&&now<=en){status="active";msg="✅ LIVE — Start करो!";}
+      else{status="closed";msg="🔒 बंद हो गया";}
+      return {...e,_status:status,_msg:msg};
+    });
+    if(!todayList.length){S.eStatus="none";S.eMsg="📅 आज कोई Exam Schedule नहीं है";S.exam=null;}
+    else{
+      const activeNow=S.todaysExams.find(e=>e._status==="active");
+      const firstUpcoming=S.todaysExams.find(e=>e._status==="upcoming");
+      S.exam=activeNow||firstUpcoming||S.todaysExams[0];
+      const anyActive=S.todaysExams.some(e=>e._status==="active");
+      S.eStatus=anyActive?"active":"upcoming";
+      S.eMsg=anyActive?"✅ आज के Exams LIVE हैं!":"⏰ आज के Exams Schedule हैं";
     }
   }catch{S.eStatus="error";S.eMsg="Schedule load नहीं हुआ।";}
   R();
@@ -328,17 +340,35 @@ function dashH(){
       </div>
       <div style="display:flex;flex-direction:column;gap:16px;">
         <div class="gw" style="padding:22px;">
-          <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px;">
-            <div style="width:10px;height:10px;border-radius:50%;background:${SC};box-shadow:0 0 10px ${SC};"></div>
-            <span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">Today's Exam</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <div style="width:10px;height:10px;border-radius:50%;background:${SC};box-shadow:0 0 10px ${SC};animation:pulse 2s infinite;"></div>
+              <span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">Today's Exams</span>
+            </div>
+            ${S.todaysExams&&S.todaysExams.length?`<span style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:8px;padding:2px 10px;font-size:11px;font-weight:700;">${S.todaysExams.length} Exams Today</span>`:""}
           </div>
           ${S.eStatus==="loading"?`<div style="color:#94a3b8;text-align:center;padding:20px;">Loading…</div>`:
-          S.exam?`
-            <div style="color:#1e293b;font-size:17px;font-weight:800;margin-bottom:14px;line-height:1.3;">${esc(S.exam.subject)}</div>
-            ${[["📋",S.exam.examCode],["⏰",S.exam.startTime],["🏁",S.exam.endTime],["📊 Marks",S.exam.totalMarks]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f0f4ff;"><span style="color:#94a3b8;font-size:13px;">${l}</span><span style="color:#1e293b;font-size:13px;font-weight:700;">${esc(String(v||""))}</span></div>`).join("")}
-            <div style="background:${SC}18;border:2px solid ${SC}44;border-radius:12px;padding:10px;text-align:center;color:${SC};font-size:13px;font-weight:700;margin:12px 0;">${S.eMsg}</div>
-            ${S.eStatus==="active"?`<button class="btn bp" onclick="startExam()">🚀 Exam Start करो</button>`:""}
-          `:`<div style="text-align:center;padding:20px;"><div style="font-size:40px;margin-bottom:10px;">📅</div><div style="color:#94a3b8;font-size:14px;">${S.eMsg}</div></div>`}
+          (S.todaysExams&&S.todaysExams.length)?
+            S.todaysExams.map((ex,idx)=>{
+              const stClr={active:"#10b981",upcoming:"#f59e0b",closed:"#ef4444"}[ex._status]||"#94a3b8";
+              const stBg={active:"#f0fdf4",upcoming:"#fffbeb",closed:"#fef3f2"}[ex._status]||"#f8f9ff";
+              const isActive=ex._status==="active";
+              return `<div style="border:2px solid ${stClr}33;border-radius:16px;padding:14px;margin-bottom:${idx<S.todaysExams.length-1?10:0}px;background:${stBg};">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                  <div style="color:#1e293b;font-size:14px;font-weight:800;line-height:1.3;flex:1;padding-right:8px;">${esc(ex.subject)}</div>
+                  <span style="background:${stClr}22;color:${stClr};border:1px solid ${stClr}55;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;">${isActive?"🟢 LIVE":ex._status==="upcoming"?"📅 Coming":"🔒 Closed"}</span>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+                  <span style="color:#667eea;font-size:11px;font-weight:600;">📋 ${esc(ex.examCode)}</span>
+                  <span style="color:#10b981;font-size:11px;font-weight:600;">⏰ ${esc(ex.startTime||"")}</span>
+                  <span style="color:#64748b;font-size:11px;">🏁 ${esc(ex.endTime||"")}</span>
+                  <span style="color:#1e293b;font-size:11px;font-weight:700;">📊 ${esc(String(ex.totalMarks||""))} Marks</span>
+                </div>
+                <div style="color:${stClr};font-size:11px;font-weight:600;margin-bottom:${isActive?8:0}px;">${esc(ex._msg||"")}</div>
+                ${isActive?`<button class="btn bp" style="padding:9px 16px;font-size:13px;border-radius:12px;" onclick="startExamByCode('${esc(ex.examCode)}')">🚀 Start Exam</button>`:""}
+              </div>`;
+            }).join("")
+          :`<div style="text-align:center;padding:20px;"><div style="font-size:40px;margin-bottom:10px;">📅</div><div style="color:#94a3b8;font-size:14px;">${S.eMsg}</div></div>`}
         </div>
         <div class="glass" style="padding:20px;">
           <div style="color:#fff;font-size:13px;font-weight:700;margin-bottom:12px;">📌 Important Rules</div>
@@ -391,7 +421,7 @@ function doLogout(){
   clearIvs();
   if(S.stream)S.stream.getTracks().forEach(t=>t.stop());
   if(S.camS)S.camS.getTracks().forEach(t=>t.stop());
-  S={scr:"login",student:null,exam:null,questions:[],cur:0,seen:new Set(),marked:new Set(),tLeft:0,wCnt:0,warnings:[],viols:[],pdfDone:false,pdfLink:"",submitting:false,submitted:false,eStatus:"loading",eLoading:false,eMsg:"",photos:[],allExams:[],attData:[],attLoad:true,attQ:"",tIv:null,aIv:null,fIv:null,stream:null,camS:null,adminTab:"attendance",examList:[],examListLoad:false,ttCode:"",ttRow:0,ttDate:"",ttStart:"",ttEnd:"",ttMsg:"",ttSaving:false,ttLoading:false,ttLoaded:false,qCode:"",qRow:0,qYear:0,qCourse:"",setupQs:[],qMsg:"",qSaving:false,qLoading:false,qLoaded:false,setupCode:"",setupRow:0,setupDate:"",setupStart:"",setupEnd:"",setupMsg:"",setupSaving:false,setupLoading:false,setupLoaded:false};
+  S={scr:"login",student:null,exam:null,questions:[],cur:0,seen:new Set(),marked:new Set(),tLeft:0,wCnt:0,warnings:[],viols:[],pdfDone:false,pdfLink:"",submitting:false,submitted:false,eStatus:"loading",eLoading:false,eMsg:"",photos:[],allExams:[],todaysExams:[],attData:[],attLoad:true,attQ:"",tIv:null,aIv:null,fIv:null,stream:null,camS:null,adminTab:"attendance",examList:[],examListLoad:false,ttCode:"",ttRow:0,ttDate:"",ttStart:"",ttEnd:"",ttMsg:"",ttSaving:false,ttLoading:false,ttLoaded:false,qCode:"",qRow:0,qYear:0,qCourse:"",setupQs:[],qMsg:"",qSaving:false,qLoading:false,qLoaded:false,setupCode:"",setupRow:0,setupDate:"",setupStart:"",setupEnd:"",setupMsg:"",setupSaving:false,setupLoading:false,setupLoaded:false};
   R();
 }
 
@@ -451,6 +481,13 @@ function showRules(){
   box.appendChild(btns);
   ov.appendChild(box);
   document.body.appendChild(ov);
+}
+
+// startExamByCode: called from Today's Exams card with specific exam code
+function startExamByCode(examCode){
+  const ex=S.todaysExams&&S.todaysExams.find(e=>e.examCode===examCode);
+  if(ex){S.exam=ex;}else{alert("Exam data नहीं मिला");return;}
+  showRules();
 }
 
 async function startExam(){
