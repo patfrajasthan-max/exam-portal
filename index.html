@@ -101,6 +101,7 @@ let S={
   tLeft:0, wCnt:0, warnings:[], viols:[],
   pdfDone:false, pdfLink:"", submitting:false, submitted:false,
   eStatus:"loading", eMsg:"", photos:[],
+  attendancePhoto:"", attendancePhotoTaken:false,
   allExams:[], // all exams for this student (for timetable view)
   todaysExams:[], // all today's exams with per-exam status
   attData:[], attLoad:true, attQ:"",
@@ -491,10 +492,98 @@ function startExamByCode(el){
     const examCode=typeof el==="string"?el:(el&&el.dataset?el.dataset.code:String(el));
     const list=S.todaysExams||[];
     const ex=list.find(e=>String(e.examCode).trim()===String(examCode).trim());
-    if(ex){S.exam=ex;showRules();}
+    if(ex){S.exam=ex;showAttendancePhoto();}
     else{alert("Exam data नहीं मिला। आजके exams: "+list.map(e=>e.examCode).join(", ")+"  | तलाश: "+examCode);}
   }catch(err){alert("Error: "+err.message);}
 }
+
+// ── ATTENDANCE PHOTO CAPTURE (before exam rules) ───────────────
+let _attCamStream=null;
+function showAttendancePhoto(){
+  S.attendancePhoto="";S.attendancePhotoTaken=false;
+  const ov=document.createElement("div");
+  ov.id="attPhotoOv";
+  ov.style.cssText="position:fixed;inset:0;z-index:999999;background:rgba(10,10,30,0.92);display:flex;align-items:center;justify-content:center;padding:20px;";
+  ov.innerHTML=`
+  <div class="gw" style="max-width:420px;width:100%;border-radius:24px;padding:28px;text-align:center;">
+    <div style="font-size:44px;margin-bottom:8px;">📸</div>
+    <div style="color:#1e293b;font-size:20px;font-weight:800;margin-bottom:4px;">Attendance Photo</div>
+    <div style="color:#64748b;font-size:13px;margin-bottom:20px;">Exam शुरू करने से पहले अपनी photo ली जाएगी।<br/>Camera के सामने बैठो और photo लो।</div>
+    <div id="attVidWrap" style="border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px;position:relative;aspect-ratio:4/3;display:block;">
+      <video id="attVid" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+      <canvas id="attCanvas" style="display:none;width:100%;height:100%;"></canvas>
+      <div id="attLive" style="position:absolute;top:8px;left:8px;background:#f5576c;border-radius:6px;padding:2px 8px;color:#fff;font-size:10px;font-weight:700;animation:pulse 2s infinite;">● LIVE</div>
+    </div>
+    <div id="attPhotoPreview" style="display:none;border-radius:16px;overflow:hidden;margin-bottom:14px;"><img id="attPhotoImg" style="width:100%;border-radius:16px;" /></div>
+    <div id="attMsg" style="font-size:13px;color:#64748b;margin-bottom:14px;">Camera allow करो और photo लो।</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button id="attSnapBtn" onclick="attSnap()" class="btn bp" style="flex:1;padding:13px;">📷 Photo लो</button>
+      <button id="attRetakeBtn" onclick="attRetake()" class="btn" style="flex:1;padding:13px;display:none;background:rgba(102,126,234,.1);border:2px solid rgba(102,126,234,.3);color:#667eea;font-weight:700;cursor:pointer;">🔄 Retake</button>
+    </div>
+    <button id="attProceedBtn" onclick="attProceed()" class="btn bs" style="margin-top:10px;padding:13px;" disabled>✅ Photo OK — Exam शुरू करो</button>
+    <button onclick="attSkip()" style="display:block;margin:10px auto 0;background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;font-family:inherit;">⏭ Skip (Camera नहीं है)</button>
+  </div>`;
+  document.body.appendChild(ov);
+  attStartCam();
+}
+async function attStartCam(){
+  const vid=document.getElementById("attVid");
+  const msg=document.getElementById("attMsg");
+  if(!vid)return;
+  try{
+    _attCamStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480}},audio:false});
+    vid.srcObject=_attCamStream;
+    if(msg)msg.textContent="Camera ready — Photo लो।";
+  }catch(e){
+    if(msg)msg.textContent="❌ Camera allow नहीं हुआ। Skip करो।";
+  }
+}
+function attSnap(){
+  const vid=document.getElementById("attVid");
+  const can=document.getElementById("attCanvas");
+  const img=document.getElementById("attPhotoImg");
+  const wrap=document.getElementById("attVidWrap");
+  const prev=document.getElementById("attPhotoPreview");
+  const msg=document.getElementById("attMsg");
+  const snapBtn=document.getElementById("attSnapBtn");
+  const retakeBtn=document.getElementById("attRetakeBtn");
+  const proceedBtn=document.getElementById("attProceedBtn");
+  if(!vid||!can)return;
+  can.width=vid.videoWidth||640;can.height=vid.videoHeight||480;
+  const ctx=can.getContext("2d");
+  ctx.drawImage(vid,0,0,can.width,can.height);
+  // Watermark
+  ctx.fillStyle="rgba(102,126,234,0.7)";ctx.font="bold 14px Arial";
+  const stamp=`${S.student?.name||""} · ${S.student?.rollNo||""} · ${S.exam?.examCode||""} · ${new Date().toLocaleString("en-IN")}`;
+  ctx.fillText(stamp,8,can.height-10);
+  const dataUrl=can.toDataURL("image/jpeg",0.85);
+  S.attendancePhoto=dataUrl;S.attendancePhotoTaken=true;
+  if(img){img.src=dataUrl;}
+  if(wrap)wrap.style.display="none";
+  if(prev)prev.style.display="block";
+  if(msg)msg.textContent="✅ Photo ली गई! Retake या Proceed करो।";
+  if(snapBtn)snapBtn.style.display="none";
+  if(retakeBtn)retakeBtn.style.display="block";
+  if(proceedBtn)proceedBtn.disabled=false;
+}
+function attRetake(){
+  S.attendancePhoto="";S.attendancePhotoTaken=false;
+  const wrap=document.getElementById("attVidWrap");
+  const prev=document.getElementById("attPhotoPreview");
+  const msg=document.getElementById("attMsg");
+  const snapBtn=document.getElementById("attSnapBtn");
+  const retakeBtn=document.getElementById("attRetakeBtn");
+  const proceedBtn=document.getElementById("attProceedBtn");
+  if(wrap)wrap.style.display="block";
+  if(prev)prev.style.display="none";
+  if(msg)msg.textContent="Camera ready — दोबारा photo लो।";
+  if(snapBtn)snapBtn.style.display="block";
+  if(retakeBtn)retakeBtn.style.display="none";
+  if(proceedBtn)proceedBtn.disabled=true;
+}
+function attStopCam(){if(_attCamStream){_attCamStream.getTracks().forEach(t=>t.stop());_attCamStream=null;}}
+function attProceed(){attStopCam();const ov=document.getElementById("attPhotoOv");if(ov)ov.remove();showRules();}
+function attSkip(){S.attendancePhoto="";S.attendancePhotoTaken=false;attStopCam();const ov=document.getElementById("attPhotoOv");if(ov)ov.remove();showRules();}
 
 async function startExam(){
   if(!S.student||!S.exam){alert("Student या Exam data नहीं मिला। Page refresh करो।");return;}
