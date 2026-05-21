@@ -91,7 +91,7 @@ select.sinp{cursor:pointer;}
 <div id="portal"><div id="app"></div></div>
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const GAS="https://script.google.com/macros/s/AKfycbx4HZoBFzruxZQVSDiiCVxaeUV1qsa9FCnWRq9OwYXJHp4mTBzffTEftqTwmEpkOPod/exec";
+const GAS="https://script.google.com/macros/s/AKfycbzbm9fuWnEjOR9uYfJC4A_8VtVW4rg6MA1e98CAFy6tEq3KGwvf-dZA35qOIted2xTx/exec";
 const AU="admin@careereduhub.in", AP="Admin@2025";
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -501,6 +501,7 @@ function startExamByCode(el){
 let _attCamStream=null;
 function showAttendancePhoto(){
   S.attendancePhoto="";S.attendancePhotoTaken=false;
+  const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const ov=document.createElement("div");
   ov.id="attPhotoOv";
   ov.style.cssText="position:fixed;inset:0;z-index:999999;background:rgba(10,10,30,0.92);display:flex;align-items:center;justify-content:center;padding:20px;";
@@ -508,7 +509,24 @@ function showAttendancePhoto(){
   <div class="gw" style="max-width:420px;width:100%;border-radius:24px;padding:28px;text-align:center;">
     <div style="font-size:44px;margin-bottom:8px;">📸</div>
     <div style="color:#1e293b;font-size:20px;font-weight:800;margin-bottom:4px;">Attendance Photo</div>
-    <div style="color:#64748b;font-size:13px;margin-bottom:20px;">Exam शुरू करने से पहले अपनी photo ली जाएगी।<br/>Camera के सामने बैठो और photo लो।</div>
+    <div style="color:#64748b;font-size:13px;margin-bottom:16px;">Exam शुरू करने से पहले अपनी photo ली जाएगी।<br/>सामने देखो और photo लो।</div>
+
+    ${isMobile?`
+    <!-- MOBILE: direct camera button via input capture -->
+    <div id="attVidWrap" style="border-radius:16px;background:linear-gradient(135deg,#f0f4ff,#e8edff);margin-bottom:14px;padding:32px 16px;display:flex;flex-direction:column;align-items:center;gap:12px;">
+      <div style="font-size:64px;">📷</div>
+      <div style="color:#667eea;font-size:13px;font-weight:600;">Camera बटन दबाओ → Selfie लो → OK</div>
+    </div>
+    <div id="attPhotoPreview" style="display:none;border-radius:16px;overflow:hidden;margin-bottom:14px;"><img id="attPhotoImg" style="width:100%;border-radius:16px;" /></div>
+    <div id="attMsg" style="font-size:13px;color:#64748b;margin-bottom:14px;">नीचे 📷 बटन click करो और selfie लो।</div>
+    <!-- Hidden file input with front camera capture -->
+    <input type="file" id="attFileInp" accept="image/*" capture="user" style="display:none;" onchange="attHandleFile(this)"/>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button id="attSnapBtn" onclick="document.getElementById('attFileInp').click()" class="btn bp" style="flex:1;padding:14px;font-size:15px;">📷 Camera से Photo लो</button>
+      <button id="attRetakeBtn" onclick="document.getElementById('attFileInp').click()" class="btn" style="flex:1;padding:14px;display:none;background:rgba(102,126,234,.1);border:2px solid rgba(102,126,234,.3);color:#667eea;font-weight:700;cursor:pointer;">🔄 Retake</button>
+    </div>
+    `:`
+    <!-- DESKTOP: getUserMedia video stream -->
     <div id="attVidWrap" style="border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px;position:relative;aspect-ratio:4/3;display:block;">
       <video id="attVid" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
       <canvas id="attCanvas" style="display:none;width:100%;height:100%;"></canvas>
@@ -520,22 +538,83 @@ function showAttendancePhoto(){
       <button id="attSnapBtn" onclick="attSnap()" class="btn bp" style="flex:1;padding:13px;">📷 Photo लो</button>
       <button id="attRetakeBtn" onclick="attRetake()" class="btn" style="flex:1;padding:13px;display:none;background:rgba(102,126,234,.1);border:2px solid rgba(102,126,234,.3);color:#667eea;font-weight:700;cursor:pointer;">🔄 Retake</button>
     </div>
+    `}
+
     <button id="attProceedBtn" onclick="attProceed()" class="btn bs" style="margin-top:10px;padding:13px;" disabled>✅ Photo OK — Exam शुरू करो</button>
-    <button onclick="attSkip()" style="display:block;margin:10px auto 0;background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;font-family:inherit;">⏭ Skip (Camera नहीं है)</button>
+    <button onclick="attSkip()" style="display:block;margin:10px auto 0;background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;font-family:inherit;">⏭ Skip (Photo नहीं लेनी)</button>
   </div>`;
   document.body.appendChild(ov);
-  attStartCam();
+  if(!isMobile) attStartCam();
+}
+
+// Mobile: handle photo from file input
+function attHandleFile(inp){
+  const file=inp.files&&inp.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const dataUrl=e.target.result;
+    // Add watermark via canvas
+    const image=new Image();
+    image.onload=function(){
+      const can=document.createElement("canvas");
+      can.width=image.width;can.height=image.height;
+      const ctx=can.getContext("2d");
+      ctx.drawImage(image,0,0);
+      const now=new Date();
+      const stamp=`${S.student?.name||""} · ${S.student?.rollNo||""} · ${S.exam?.examCode||""} · ${now.toLocaleString("en-IN")}`;
+      ctx.fillStyle="rgba(0,0,0,0.6)";ctx.fillRect(0,can.height-34,can.width,34);
+      ctx.fillStyle="#fff";ctx.font=`bold ${Math.max(12,Math.round(can.width*0.022))}px Arial`;
+      ctx.fillText(stamp,8,can.height-10);
+      const finalUrl=can.toDataURL("image/jpeg",0.88);
+      S.attendancePhoto=finalUrl;S.attendancePhotoTaken=true;
+      const img=document.getElementById("attPhotoImg");
+      const prev=document.getElementById("attPhotoPreview");
+      const wrap=document.getElementById("attVidWrap");
+      const msg=document.getElementById("attMsg");
+      const snapBtn=document.getElementById("attSnapBtn");
+      const retakeBtn=document.getElementById("attRetakeBtn");
+      const proceedBtn=document.getElementById("attProceedBtn");
+      if(img)img.src=finalUrl;
+      if(wrap)wrap.style.display="none";
+      if(prev)prev.style.display="block";
+      if(msg){msg.style.color="#16a34a";msg.textContent="✅ Photo ली गई! Google Drive में save हो रही है…";}
+      if(snapBtn)snapBtn.style.display="none";
+      if(retakeBtn)retakeBtn.style.display="block";
+      if(proceedBtn)proceedBtn.disabled=false;
+      attSaveToDrive(finalUrl, now);
+    };
+    image.src=dataUrl;
+  };
+  reader.readAsDataURL(file);
+  inp.value=""; // reset so same file can be selected again
 }
 async function attStartCam(){
   const vid=document.getElementById("attVid");
   const msg=document.getElementById("attMsg");
   if(!vid)return;
   try{
-    _attCamStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480}},audio:false});
-    vid.srcObject=_attCamStream;
-    if(msg)msg.textContent="Camera ready — Photo लो।";
+    // Try front camera first, fallback to any camera
+    let stream;
+    try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}},audio:false});}
+    catch{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
+    _attCamStream=stream;
+    vid.srcObject=stream;
+    await vid.play().catch(()=>{});
+    if(msg){msg.style.color="#16a34a";msg.textContent="✅ Camera ready — Photo लो।";}
   }catch(e){
-    if(msg)msg.textContent="❌ Camera allow नहीं हुआ। Skip करो।";
+    if(msg){msg.style.color="#ef4444";msg.textContent="❌ Camera allow नहीं हुआ। Browser Settings में Camera permission दो या Skip करो।";}
+    // Show file input fallback on desktop too
+    const snapBtn=document.getElementById("attSnapBtn");
+    if(snapBtn){
+      snapBtn.textContent="🖼️ Gallery से Photo चुनो";
+      snapBtn.onclick=function(){
+        const fi=document.createElement("input");
+        fi.type="file";fi.accept="image/*";
+        fi.onchange=function(){if(fi.files[0]){const r=new FileReader();r.onload=e=>{const im=new Image();im.onload=()=>{const c=document.createElement("canvas");c.width=im.width;c.height=im.height;const ctx=c.getContext("2d");ctx.drawImage(im,0,0);const now=new Date();const stamp=`${S.student?.name||""} · ${S.student?.rollNo||""} · ${S.exam?.examCode||""} · ${now.toLocaleString("en-IN")}`;ctx.fillStyle="rgba(0,0,0,0.6)";ctx.fillRect(0,c.height-34,c.width,34);ctx.fillStyle="#fff";ctx.font="bold 14px Arial";ctx.fillText(stamp,8,c.height-10);const finalUrl=c.toDataURL("image/jpeg",0.88);S.attendancePhoto=finalUrl;S.attendancePhotoTaken=true;const img=document.getElementById("attPhotoImg");const prev=document.getElementById("attPhotoPreview");const wrap=document.getElementById("attVidWrap");const msg2=document.getElementById("attMsg");const retakeBtn=document.getElementById("attRetakeBtn");const proceedBtn=document.getElementById("attProceedBtn");if(img)img.src=finalUrl;if(wrap)wrap.style.display="none";if(prev)prev.style.display="block";if(msg2){msg2.style.color="#16a34a";msg2.textContent="✅ Photo ready! Drive में save हो रही है…";}if(snapBtn)snapBtn.style.display="none";if(retakeBtn)retakeBtn.style.display="block";if(proceedBtn)proceedBtn.disabled=false;attSaveToDrive(finalUrl,now);};im.src=e.target.result;};r.readAsDataURL(fi.files[0]);}};
+        fi.click();
+      };
+    }
   }
 }
 function attSnap(){
@@ -551,20 +630,67 @@ function attSnap(){
   if(!vid||!can)return;
   can.width=vid.videoWidth||640;can.height=vid.videoHeight||480;
   const ctx=can.getContext("2d");
+  // Mirror front camera
+  ctx.translate(can.width,0);ctx.scale(-1,1);
   ctx.drawImage(vid,0,0,can.width,can.height);
-  // Watermark
-  ctx.fillStyle="rgba(102,126,234,0.7)";ctx.font="bold 14px Arial";
-  const stamp=`${S.student?.name||""} · ${S.student?.rollNo||""} · ${S.exam?.examCode||""} · ${new Date().toLocaleString("en-IN")}`;
-  ctx.fillText(stamp,8,can.height-10);
-  const dataUrl=can.toDataURL("image/jpeg",0.85);
+  ctx.setTransform(1,0,0,1,0,0);
+  // Watermark strip
+  const now=new Date();
+  const stamp=`${S.student?.name||""} · ${S.student?.rollNo||""} · ${S.exam?.examCode||""} · ${now.toLocaleString("en-IN")}`;
+  ctx.fillStyle="rgba(0,0,0,0.6)";ctx.fillRect(0,can.height-30,can.width,30);
+  ctx.fillStyle="#fff";ctx.font="bold 13px Arial";
+  ctx.fillText(stamp,8,can.height-9);
+  const dataUrl=can.toDataURL("image/jpeg",0.88);
   S.attendancePhoto=dataUrl;S.attendancePhotoTaken=true;
   if(img){img.src=dataUrl;}
   if(wrap)wrap.style.display="none";
   if(prev)prev.style.display="block";
-  if(msg)msg.textContent="✅ Photo ली गई! Retake या Proceed करो।";
+  if(msg){msg.style.color="#16a34a";msg.textContent="✅ Photo ली गई! Retake या Proceed करो।";}
   if(snapBtn)snapBtn.style.display="none";
   if(retakeBtn)retakeBtn.style.display="block";
   if(proceedBtn)proceedBtn.disabled=false;
+  // ── Google Drive mein save karo (background) ──────────────────
+  attSaveToDrive(dataUrl, now);
+}
+
+async function attSaveToDrive(dataUrl, captureTime){
+  try{
+    const tz=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata"});
+    const dt=captureTime||new Date();
+    const dd=String(dt.getDate()).padStart(2,"0");
+    const mm=String(dt.getMonth()+1).padStart(2,"0");
+    const yyyy=dt.getFullYear();
+    const dateStr=`${dd}-${mm}-${yyyy}`;
+    const hhmmss=dt.toTimeString().slice(0,8).replace(/:/g,"");
+    const name=(S.student?.name||"").replace(/\s+/g,"_");
+    const roll=S.student?.rollNo||"";
+    const code=S.exam?.examCode||"";
+    const fileName=`${roll}_${code}_${name}_${hhmmss}.jpg`;
+    const fileData=dataUrl.split(",")[1];
+    const msgEl=document.getElementById("attMsg");
+    if(msgEl)msgEl.textContent="✅ Photo ली गई! Drive में save हो रही है…";
+    const res=await fetch(GAS,{
+      method:"POST",
+      body:JSON.stringify({
+        action:"saveAttendancePhoto",
+        fileData, fileName,
+        name:S.student?.name||"",
+        rollNo:roll,
+        examCode:code,
+        course:S.student?.course||"",
+        date:dateStr
+      })
+    });
+    const r=await res.json();
+    S.attendanceDriveLink=r.success?r.driveLink:"";
+    if(msgEl){
+      if(r.success){msgEl.style.color="#16a34a";msgEl.textContent="✅ Photo ली गई और Google Drive में Save हो गई! 📁";}
+      else{msgEl.style.color="#f59e0b";msgEl.textContent="✅ Photo ली गई (Drive save: "+( r.error||"error")+")। Proceed कर सकते हैं।";}
+    }
+  }catch(e){
+    const msgEl=document.getElementById("attMsg");
+    if(msgEl){msgEl.style.color="#f59e0b";msgEl.textContent="✅ Photo ली गई (Drive offline)। Proceed करो।";}
+  }
 }
 function attRetake(){
   S.attendancePhoto="";S.attendancePhotoTaken=false;
@@ -600,7 +726,14 @@ async function startExam(){
     S.seen.add(0);
   }
   S.eLoading=false;
-  try{await ap({action:"logAttendance",name:S.student.name,rollNo:String(S.student.rollNo),examCode:S.exam.examCode,course:S.student.course||"",startTime:new Date().toTimeString().slice(0,8),status:"In Exam"});}catch{}
+  try{
+    const now=new Date();
+    const dd=String(now.getDate()).padStart(2,"0");
+    const mm=String(now.getMonth()+1).padStart(2,"0");
+    const yyyy=now.getFullYear();
+    const examDate=`${dd}-${mm}-${yyyy}`;
+    await ap({action:"logAttendance",name:S.student.name,rollNo:String(S.student.rollNo),examCode:S.exam.examCode,course:S.student.course||"",startTime:now.toTimeString().slice(0,8),status:"In Exam",examDate:examDate});
+  }catch{}
   R();
   try{startTimer();}catch{}
   try{await startCamera();}catch{}
@@ -856,6 +989,17 @@ function pdfH(){
 
 // ── CAMERA FOR PDF ────────────────────────────────────────────
 async function openCam(){
+  const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile){
+    // Mobile: use file input with rear camera (environment)
+    const inp=document.getElementById("finp");
+    if(inp){
+      inp.setAttribute("capture","environment");
+      inp.click();
+    }
+    return;
+  }
+  // Desktop: getUserMedia
   const wrap=document.getElementById("camwrap"),vid=document.getElementById("camprev");
   if(!wrap||!vid)return;
   try{
@@ -973,51 +1117,110 @@ function handleFiles(inp){
 // ── CREATE PDF ────────────────────────────────────────────────
 async function createPDF(){
   closeCamera();
+  if(S.photos.length===0){alert("कोई photo नहीं है! पहले Camera से photos लो।");return;}
   const prog=document.getElementById("pdfprog"),bar=document.getElementById("pdfbar"),st=document.getElementById("pdfst");
   if(prog)prog.style.display="block";
   const pn=`${S.student?.rollNo||"ROLL"}_${(S.student?.name||"NAME").replace(/\s+/g,"_")}_${S.exam?.examCode||"EXAM"}_${dstr()}.pdf`;
+
   try{
-    if(st)st.textContent="Photos process हो रहे हैं…";if(bar)bar.style.width="15%";
+    // ── Step 1: Process photos ──────────────────────────────────
+    if(st)st.textContent="Photos process हो रहे हैं…";if(bar)bar.style.width="10%";
     const pages=[];
     for(let i=0;i<S.photos.length;i++){
       const img=await loadImg(S.photos[i]);
-      const c=document.createElement("canvas");c.width=1240;c.height=1754;
-      const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);
-      const sc=Math.min(c.width/img.width,c.height/img.height);
-      const w=img.width*sc,h=img.height*sc,x=(c.width-w)/2,y=(c.height-h)/2;
+      const c=document.createElement("canvas");
+      // A4 ratio at reasonable resolution
+      c.width=1240;c.height=1754;
+      const ctx=c.getContext("2d");
+      ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);
+      const sc=Math.min(c.width/img.width,(c.height-40)/img.height);
+      const w=img.width*sc,h=img.height*sc,x=(c.width-w)/2,y=10;
       ctx.drawImage(img,x,y,w,h);
-      ctx.fillStyle="rgba(102,126,234,0.4)";ctx.font="bold 18px Arial";
-      ctx.fillText(`${S.student?.rollNo||""} · ${S.student?.name||""} · ${S.exam?.examCode||""} · P${i+1}/${S.photos.length}`,10,c.height-12);
-      pages.push(c.toDataURL("image/jpeg",.8).split(",")[1]);
-      if(bar)bar.style.width=`${15+((i+1)/S.photos.length)*40}%`;
-      if(st)st.textContent=`Page ${i+1}/${S.photos.length} process हो रही है…`;
+      // Watermark footer
+      ctx.fillStyle="rgba(102,126,234,0.55)";
+      ctx.fillRect(0,c.height-36,c.width,36);
+      ctx.fillStyle="#fff";ctx.font="bold 15px Arial";
+      ctx.fillText(`${S.student?.rollNo||""} · ${S.student?.name||""} · ${S.exam?.examCode||""} · Page ${i+1}/${S.photos.length}`,10,c.height-12);
+      // Use 0.75 quality to keep file size manageable for GAS (< 5MB limit)
+      pages.push(c.toDataURL("image/jpeg",0.75).split(",")[1]);
+      if(bar)bar.style.width=`${10+((i+1)/S.photos.length)*35}%`;
+      if(st)st.textContent=`Page ${i+1}/${S.photos.length} ready…`;
     }
-    if(st)st.textContent="PDF बन रही है…";if(bar)bar.style.width="60%";
+
+    // ── Step 2: Build PDF ───────────────────────────────────────
+    if(st)st.textContent="PDF बन रही है…";if(bar)bar.style.width="50%";
     const pdfB64=await buildPDF(pages);
-    if(st)st.textContent="Drive में upload हो रहा है…";if(bar)bar.style.width="75%";
+
+    // Size check — GAS has ~6MB POST limit
+    const sizeKB=Math.round(pdfB64.length*0.75/1024);
+    if(st)st.textContent=`PDF ready (${sizeKB} KB) — Drive में upload हो रहा है…`;
+    if(bar)bar.style.width="65%";
+
+    // ── Step 3: Upload to GAS — with 1 retry ───────────────────
     let res=null;
-    try{res=await ap({action:"uploadPDF",fileName:pn,fileData:pdfB64,mimeType:"application/pdf",examCode:S.exam?.examCode||"",studentName:S.student?.name||"",rollNo:S.student?.rollNo||""});}
-    catch(uploadErr){console.warn("Upload call threw:",uploadErr);}
+    let attempt=0;
+    while(attempt<2){
+      attempt++;
+      try{
+        res=await ap({
+          action:"uploadPDF",
+          fileName:pn,
+          fileData:pdfB64,
+          mimeType:"application/pdf",
+          examCode:S.exam?.examCode||"",
+          studentName:S.student?.name||"",
+          rollNo:String(S.student?.rollNo||""),
+          course:S.student?.course||""
+        });
+        if(res&&res.success)break; // success — stop retrying
+        if(attempt<2){
+          if(st)st.textContent=`Retry ${attempt}…`;
+          await new Promise(r=>setTimeout(r,2000));
+        }
+      }catch(uploadErr){
+        console.warn(`Upload attempt ${attempt} threw:`,uploadErr);
+        if(attempt<2)await new Promise(r=>setTimeout(r,2000));
+      }
+    }
+
     if(bar)bar.style.width="100%";
-    // GAS redirects can cause parse issues — if no explicit error field, treat as success
-    // "Access denied: DriveApp" often fires AFTER the file is already saved — treat as soft error
+
+    // ── Step 4: Result handling ─────────────────────────────────
     const isDriveAccessErr=res&&typeof res.error==="string"&&res.error.includes("Access denied: DriveApp");
-    const isErr=res&&(res.success===false||(typeof res.error==="string"&&res.error&&!res.driveLink))&&!isDriveAccessErr;
-    if(!isErr){
-      if(st){st.textContent="✅ PDF Uploaded to Drive!";st.style.color="#16a34a";}
-      S.pdfDone=true;S.pdfLink=(res&&res.driveLink)||"";
-    }else if(isDriveAccessErr){
-      // File likely saved but GAS threw a post-save permission error
-      if(st){st.textContent="⚠️ PDF Drive में save हुआ (verify करो) — फिर भी submit कर सकते हो";st.style.color="#f59e0b";}
-      console.warn("DriveApp access error after upload (file may have saved):",res);
-      // Mark as done so student can submit — they can verify in Drive
+    const isSuccess=res&&res.success;
+    const isSoftErr=isDriveAccessErr; // file likely saved even on this error
+
+    if(isSuccess){
+      if(st){st.textContent="✅ PDF Google Drive में Upload हो गई!";st.style.color="#16a34a";}
+      S.pdfDone=true;
+      S.pdfLink=res.driveLink||"";
+      // Show drive link immediately
+      if(res.driveLink){
+        const linkEl=document.createElement("a");
+        linkEl.href=res.driveLink;linkEl.target="_blank";
+        linkEl.textContent="📎 Drive में देखो";
+        linkEl.style.cssText="display:block;margin-top:8px;color:#667eea;font-size:13px;font-weight:600;";
+        if(st)st.parentElement?.appendChild(linkEl);
+      }
+    }else if(isSoftErr){
+      if(st){st.textContent="⚠️ PDF save हुई (Drive permission warning — Drive check करो)";st.style.color="#f59e0b";}
+      console.warn("DriveApp soft error — file may have saved:",res);
       S.pdfDone=true;S.pdfLink="";
     }else{
-      if(st){st.textContent="❌ Upload failed: "+(res?.error||"No response");st.style.color="#ef4444";}
-      console.error("createPDF GAS error:",res);
+      // Real failure
+      const errMsg=res?.error||res?.msg||(res?JSON.stringify(res):"No response from server");
+      if(st){st.textContent="❌ Upload failed: "+errMsg;st.style.color="#ef4444";}
+      console.error("createPDF upload error:",res);
       S.pdfDone=false;
+      // Show retry button
+      const retryBtn=document.createElement("button");
+      retryBtn.textContent="🔄 फिर से try करो";
+      retryBtn.style.cssText="margin-top:10px;background:#667eea;border:none;border-radius:10px;padding:10px 20px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;";
+      retryBtn.onclick=createPDF;
+      if(prog)prog.appendChild(retryBtn);
     }
-    setTimeout(()=>R(),1000);
+    setTimeout(()=>R(),1200);
+
   }catch(e){
     console.error("createPDF exception:",e);
     if(bar)bar.style.width="100%";
@@ -1057,8 +1260,16 @@ async function doSubmit(){
     await ap({action:"submitResult",name:S.student.name,rollNo:S.student.rollNo,examCode:S.exam.examCode,course:S.student.course,
       score:0,totalMarks:S.questions.reduce((s,q)=>s+Number(q.marks||0),0),
       submissionTime:new Date().toTimeString().slice(0,8),pdfUploaded:S.pdfDone,
-      violations:S.viols,warnings:S.warnings,answers:{}});
+      violations:S.viols,violationCount:S.wCnt,warnings:S.warnings,answers:{}});
   }catch{}
+  // Save violations separately for Sheet3 Col L & M
+  if(S.viols.length>0){
+    try{
+      await ap({action:"saveViolation",
+        rollNo:S.student.rollNo,examCode:S.exam.examCode,
+        violations:S.viols,violationCount:S.wCnt});
+    }catch{}
+  }
   S.submitted=true;S.submitting=false;S.scr="done";R();
 }
 
@@ -1090,7 +1301,18 @@ function doneH(){return`
 
 async function loadAtt(){
   S.attLoad=true;R();
-  try{const d=await ag({action:"getAttendance"});S.attData=Array.isArray(d)?d:[];}
+  try{
+    const d=await ag({action:"getAttendance"});
+    S.attData=Array.isArray(d)?d.map(r=>({
+      name:r.name||"", rollNo:r.rollNo||"", examCode:r.examCode||"",
+      course:r.course||"", startTime:r.startTime||"", endTime:r.endTime||"",
+      status:r.status||"", pdfUploaded:r.pdfUploaded||"No",
+      photoLink:r.photoLink||"", photoCaptured:r.photoCaptured||"No",
+      examDate:r.examDate||"",
+      violationCount:Number(r.violationCount||0),
+      violations:Array.isArray(r.violations)?r.violations:[]
+    })):[];
+  }
   catch{S.attData=[];}
   S.attLoad=false;R();
 }
@@ -1238,8 +1460,8 @@ async function setupSave(){await qSave();}
 // ─── ADMIN HTML ───────────────────────────────────────────────
 function adminH(){
   const data=S.attData,f=S.attQ.toLowerCase();
-  const filtered=f?data.filter(r=>(r.name||"").toLowerCase().includes(f)||(r.rollNo||"").toLowerCase().includes(f)||(r.course||"").toLowerCase().includes(f)):data;
-  const stats={tot:data.length,in:data.filter(r=>r.status==="In Exam").length,sub:data.filter(r=>r.status==="Submitted").length,pdf:data.filter(r=>r.pdfUploaded==="Yes").length};
+  const filtered=f?data.filter(r=>(r.name||"").toLowerCase().includes(f)||(r.rollNo||"").toLowerCase().includes(f)||(r.course||"").toLowerCase().includes(f)||(r.examCode||"").toLowerCase().includes(f)):data;
+  const stats={tot:data.length,in:data.filter(r=>r.status==="In Exam").length,sub:data.filter(r=>r.status==="Submitted").length,pdf:data.filter(r=>r.pdfUploaded==="Yes").length,photo:data.filter(r=>String(r.photoCaptured||"").toUpperCase()==="YES").length,viols:data.reduce((s,r)=>s+Number(r.violationCount||0),0)};
 
   return`
 <div style="min-height:100vh;">
@@ -1263,8 +1485,8 @@ function adminH(){
 
     <!-- ══ TAB 1: LIVE ATTENDANCE ══ -->
     ${S.adminTab==="attendance"?`
-    <div class="stg" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
-      ${[["👥","Total",stats.tot,"linear-gradient(135deg,#667eea,#764ba2)"],["✍️","In Exam",stats.in,"linear-gradient(135deg,#f7971e,#ffd200)"],["✅","Submitted",stats.sub,"linear-gradient(135deg,#10b981,#059669)"],["📄","PDF Done",stats.pdf,"linear-gradient(135deg,#4facfe,#00f2fe)"]].map(([ic,lb,v,bg])=>`<div style="background:${bg};border-radius:16px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.1);"><div style="font-size:28px;margin-bottom:8px;">${ic}</div><div style="color:#fff;font-size:32px;font-weight:900;">${v}</div><div style="color:rgba(255,255,255,.85);font-size:13px;font-weight:600;margin-top:2px;">${lb}</div></div>`).join("")}
+    <div class="stg" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px;">
+      ${[["👥","Total",stats.tot,"linear-gradient(135deg,#667eea,#764ba2)"],["✍️","In Exam",stats.in,"linear-gradient(135deg,#f7971e,#ffd200)"],["✅","Submitted",stats.sub,"linear-gradient(135deg,#10b981,#059669)"],["📄","PDF Done",stats.pdf,"linear-gradient(135deg,#4facfe,#00f2fe)"],["📷","Photos",stats.photo,"linear-gradient(135deg,#a78bfa,#7c3aed)"],["⚠️","Violations",stats.viols,"linear-gradient(135deg,#f5576c,#ef4444)"]].map(([ic,lb,v,bg])=>`<div style="background:${bg};border-radius:16px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.1);"><div style="font-size:24px;margin-bottom:6px;">${ic}</div><div style="color:#fff;font-size:28px;font-weight:900;">${v}</div><div style="color:rgba(255,255,255,.85);font-size:12px;font-weight:600;margin-top:2px;">${lb}</div></div>`).join("")}
     </div>
     <div class="gw" style="overflow:hidden;padding:0;">
       <div style="padding:18px 22px;border-bottom:2px solid #f0f4ff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
@@ -1276,27 +1498,36 @@ function adminH(){
       </div>
       <div style="overflow-x:auto;">
         <table class="tbl">
-          <thead><tr>${["#","Name","Roll No","Course","Exam","Start","End","Status","PDF"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+          <thead><tr>${["#","Name","Roll No","Course","Exam","📅 Date","Start","End","Status","PDF","📷 Photo","⚠️ Violations"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
           <tbody>
-            ${S.attLoad?`<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:50px;">Loading…</td></tr>`:
-            filtered.length===0?`<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:50px;">No records yet</td></tr>`:
-            filtered.map((r,i)=>`<tr>
+            ${S.attLoad?`<tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:50px;">Loading…</td></tr>`:
+            filtered.length===0?`<tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:50px;">No records yet</td></tr>`:
+            filtered.map((r,i)=>{
+              const photoCap=String(r.photoCaptured||"").toUpperCase()==="YES";
+              const vc=Number(r.violationCount||0);
+              const vcColor=vc===0?"#16a34a":vc<=2?"#f59e0b":"#ef4444";
+              const vcBg=vc===0?"#f0fdf4":vc<=2?"#fffbeb":"#fef3f2";
+              const photoLink=r.photoLink||"";
+              return`<tr>
               <td style="color:#94a3b8;font-weight:600;">${i+1}</td>
               <td style="font-weight:700;">${esc(r.name)}</td>
               <td style="color:#667eea;font-weight:600;">${esc(r.rollNo)}</td>
               <td style="color:#64748b;">${esc(r.course)}</td>
               <td style="color:#667eea;font-weight:600;">${esc(r.examCode)}</td>
+              <td style="color:#1e293b;font-weight:600;white-space:nowrap;">${esc(r.examDate||"—")}</td>
               <td style="color:#10b981;font-weight:600;">${esc(r.startTime||"—")}</td>
               <td style="color:${r.endTime?"#64748b":"#f59e0b"};">${esc(r.endTime||"In Progress…")}</td>
               <td><span class="chip" style="background:${r.status==="Submitted"?"#dcfce7":"#fef9c3"};color:${r.status==="Submitted"?"#16a34a":"#92400e"};border:1px solid ${r.status==="Submitted"?"#86efac":"#fde68a"};">${r.status==="Submitted"?"✅ Submitted":"✍️ In Exam"}</span></td>
               <td><span class="chip" style="background:${r.pdfUploaded==="Yes"?"#e0f2fe":"#fef3f2"};color:${r.pdfUploaded==="Yes"?"#0369a1":"#dc2626"};border:1px solid ${r.pdfUploaded==="Yes"?"#7dd3fc":"#fecaca"};">${r.pdfUploaded==="Yes"?"📄 Yes":"❌ No"}</span></td>
-            </tr>`).join("")}
+              <td>${photoCap?`<a href="${esc(photoLink)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:3px 9px;color:#16a34a;font-size:12px;font-weight:700;text-decoration:none;" ${!photoLink?"onclick='event.preventDefault()'":""}>📷 Yes${photoLink?"↗":""}</a>`:`<span class="chip" style="background:#fef3f2;color:#dc2626;border:1px solid #fecaca;">❌ No</span>`}</td>
+              <td><span class="chip" style="background:${vcBg};color:${vcColor};border:1px solid ${vcColor}44;font-size:13px;font-weight:800;">${vc===0?"✅ 0":("⚠️ "+vc)}</span></td>
+            </tr>`;}).join("")}
           </tbody>
         </table>
       </div>
       <div style="padding:12px 22px;border-top:2px solid #f0f4ff;display:flex;justify-content:space-between;">
         <span style="color:#94a3b8;font-size:12px;">${filtered.length} of ${data.length}</span>
-        <span style="color:#94a3b8;font-size:12px;">🟢 ${stats.in} Live · ✅ ${stats.sub} Done · 📄 ${stats.pdf} PDF</span>
+        <span style="color:#94a3b8;font-size:12px;">🟢 ${stats.in} Live · ✅ ${stats.sub} Done · 📄 ${stats.pdf} PDF · 📷 ${stats.photo} Photos · ⚠️ ${stats.viols} Violations</span>
       </div>
     </div>`:""}
 
