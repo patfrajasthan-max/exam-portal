@@ -91,7 +91,7 @@ select.sinp{cursor:pointer;}
 <div id="portal"><div id="app"></div></div>
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const GAS="https://script.google.com/macros/s/AKfycbzbm9fuWnEjOR9uYfJC4A_8VtVW4rg6MA1e98CAFy6tEq3KGwvf-dZA35qOIted2xTx/exec";
+const GAS="https://script.google.com/macros/s/AKfycbzjFdbI4EKK2nje90QJxl4jK1waW0DdMuyIp_AmtKnPEBf4Vz_C14ssWkGL9gqJf07_/exec";
 const AU="admin@careereduhub.in", AP="Admin@2025";
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -655,7 +655,6 @@ function attSnap(){
 
 async function attSaveToDrive(dataUrl, captureTime){
   try{
-    const tz=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata"});
     const dt=captureTime||new Date();
     const dd=String(dt.getDate()).padStart(2,"0");
     const mm=String(dt.getMonth()+1).padStart(2,"0");
@@ -668,7 +667,7 @@ async function attSaveToDrive(dataUrl, captureTime){
     const fileName=`${roll}_${code}_${name}_${hhmmss}.jpg`;
     const fileData=dataUrl.split(",")[1];
     const msgEl=document.getElementById("attMsg");
-    if(msgEl)msgEl.textContent="✅ Photo ली गई! Drive में save हो रही है…";
+    if(msgEl){msgEl.style.color="#667eea";msgEl.textContent="⏳ Drive में save हो रही है…";}
     const res=await fetch(GAS,{
       method:"POST",
       body:JSON.stringify({
@@ -682,14 +681,21 @@ async function attSaveToDrive(dataUrl, captureTime){
       })
     });
     const r=await res.json();
-    S.attendanceDriveLink=r.success?r.driveLink:"";
+    S.attendanceDriveLink=r.driveLink||"";
     if(msgEl){
-      if(r.success){msgEl.style.color="#16a34a";msgEl.textContent="✅ Photo ली गई और Google Drive में Save हो गई! 📁";}
-      else{msgEl.style.color="#f59e0b";msgEl.textContent="✅ Photo ली गई (Drive save: "+( r.error||"error")+")। Proceed कर सकते हैं।";}
+      if(r.success){
+        // success — file IS in Drive (sharing warning is non-fatal)
+        msgEl.style.color="#16a34a";
+        msgEl.textContent="✅ Photo ली गई और Google Drive में Save हो गई! 📁";
+      }else{
+        // Real failure
+        msgEl.style.color="#f59e0b";
+        msgEl.textContent="✅ Photo ली गई। Drive save नहीं हुआ — Exam continue करो।";
+      }
     }
   }catch(e){
     const msgEl=document.getElementById("attMsg");
-    if(msgEl){msgEl.style.color="#f59e0b";msgEl.textContent="✅ Photo ली गई (Drive offline)। Proceed करो।";}
+    if(msgEl){msgEl.style.color="#f59e0b";msgEl.textContent="✅ Photo ली गई। (Network error) — Exam continue करो।";}
   }
 }
 function attRetake(){
